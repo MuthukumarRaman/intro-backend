@@ -1,0 +1,350 @@
+{
+    "dataSetName": "Test1",
+    "dataSetDescription": "test1",
+    "dataSetBaseCollection": "organisation",
+    "dataSetBaseCollectionFilter": [
+        {
+            "clause": "AND",
+            "conditions": [
+              {
+                    "column": "_id",
+                    "operator": "EQUALS",
+                    "type": "string",
+                    "Value": "parthi"
+                },
+                {
+                    "clause": "OR",
+                    "conditions": [
+                        {
+                            "column": "org_name",
+                            "operator": "NOTEQUAL",
+                            "type": "string",
+                            "value": "nas",
+                            "parentCollectionName": "organisation"
+                        },
+                        {
+                            "column": "status",
+                            "operator": "NOTEQUAL",
+                            "type": "string",
+                            "value": "nas",
+                            "parentCollectionName": "organisation"
+                        },
+                        {
+                            "column": "status",
+                            "operator": "EQUALS",
+                            "type": "string",
+                            "value": "Email Sended",
+                            "parentCollectionName": "organisation"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "dataSetJoinCollection": [
+        {
+            "convert_To_String": true,
+            "fromCollection": "organisation",
+            "fromCollectionField": "_id",
+            "toCollection": "facility",
+            "toCollectionField": "org_id",
+            "filter": [
+                {
+                    "clause": "AND",
+                    "conditions": [
+                        {
+                            "column": "_id",
+                            "operator": "NOTEQUAL",
+                            "type": "string",
+                            "value": "F31",
+                            "parentCollectionName": "facility"
+                        },
+                        {
+                            "column": "status",
+                            "operator": "NOTEQUAL",
+                            "type": "string",
+                            "value": "nas",
+                            "parentCollectionName": "facility"
+                        },
+                        {
+                            "clause": "OR",
+                            "conditions": [
+                                {
+                                    "column": "facility_type",
+                                    "operator": "NOTEQUAL",
+                                    "type": "string",
+                                    "value": "nas",
+                                    "parentCollectionName": "facility"
+                                },
+                                {
+                                    "column": "status",
+                                    "operator": "NOTEQUAL",
+                                    "type": "string",
+                                    "value": "na",
+                                    "parentCollectionName": "facility"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "convert_To_String": true,
+            "fromCollection": "facility",
+            "fromCollectionField": "_id",
+            "toCollection": "device",
+            "toCollectionField": "facility_id"
+        }
+    ],
+    "CustomColumn": [
+        {
+            "convert_To_String": true,
+            "dataSetCustomColumnName": "test",
+            "dataSetCustomLabelName": "test",
+            "dataSetCustomAggregateFnName": "concat",
+            "dataSetCustomField": [
+                {
+                    "name": "ORGANISATION--ID",
+                    "field_name": "_id",
+                    "parentCollectionName": "organisation",
+                    "type": "string"
+                },
+                {
+                    "name": "ORGANISATION--ORG TYPE",
+                    "field_name": "org_type",
+                    "parentCollectionName": "organisation",
+                    "reference": true,
+                    "orbitalvaule": {
+                        "collection_name": "org_type",
+                        "field": "name"
+                    },
+                    "type": "string"
+                },
+                {
+                    "name": "FACILITY--ID",
+                    "field_name": "_id",
+                    "parentCollectionName": "facility",
+                    "type": "string"
+                },
+                {
+                    "name": "FACILITY--ORG ID",
+                    "field_name": "org_id",
+                    "parentCollectionName": "facility",
+                    "reference": true,
+                    "orbitalvaule": {
+                        "collection_name": "organisation",
+                        "field": "id"
+                    },
+                    "type": "string"
+                },
+                {
+                    "name": "DEVICE--DEVICE NAME",
+                    "field_name": "device_name",
+                    "parentCollectionName": "device",
+                    "type": "string"
+                },
+                {
+                    "name": "ORGANISATION--BILLING ADDRESS : AREA NAME",
+                    "field_name": "billing_address.area_name",
+                    "parentCollectionName": "organisation",
+                    "type": "string"
+                },
+                {
+                    "name": "FACILITY--ADDRESS : LANDMARK",
+                    "field_name": "address.landmark",
+                    "parentCollectionName": "facility",
+                    "type": "string",
+                    "hide": false
+                },
+                {
+                    "name": "FACILITY--ADDRESS : ZIPCODE",
+                    "field_name": "address.zipcode",
+                    "parentCollectionName": "facility",
+                    "type": "int64"
+                }
+            ]
+        }
+    ],
+    "Aggregation": [
+        {
+            "convert_To_String": true,
+            "Agg_Column_Name": "testagg",
+            "Agg_Field_Name": {
+                "name": "ORGANISATION--ADDRESS : ZIPCODE",
+                "field_name": "address.zipcode",
+                "parentCollectionName": "organisation",
+                "type": "int64"
+            },
+            "Agg_Fn_Name": "MIN",
+            "Agg_group_byField": {
+                "name": "FACILITY--ADDRESS : ZIPCODE",
+                "field_name": "address.zipcode",
+                "parentCollectionName": "facility",
+                "type": "int64"
+            }
+        }
+    ],
+    "SelectedList": [
+        {
+            "name": "ORGANISATION--ORG TYPE",
+            "field_name": "org_type",
+            "parentCollectionName": "organisation",
+            "reference": true,
+            "orbitalvaule": {
+                "collection_name": "org_type",
+                "field": "name"
+            },
+            "type": "string"
+        },
+        {
+            "name": "ORGANISATION--STATUS",
+            "field_name": "status",
+            "parentCollectionName": "organisation",
+            "type": "string"
+        },
+        {
+            "name": "FACILITY--ADDRESS : LANDMARK",
+            "field_name": "address.landmark",
+            "parentCollectionName": "facility",
+            "type": "string",
+            "hide": false
+        },
+        {
+            "name": "FACILITY--ADDRESS : STREET",
+            "field_name": "address.street",
+            "parentCollectionName": "facility",
+            "type": "string"
+        },
+        {
+            "name": "DEVICE--FACILITY ID",
+            "field_name": "facility_id",
+            "parentCollectionName": "device",
+            "reference": true,
+            "orbitalvaule": {
+                "collection_name": "facility",
+                "field": "id"
+            },
+            "type": "string"
+        },
+        {
+            "name": "FACILITY--ADDRESS : AREA NAME",
+            "field_name": "address.area_name",
+            "parentCollectionName": "facility",
+            "type": "string"
+        },
+        {
+            "name": "DEVICE--INSTALLED ON",
+            "field_name": "installed_on",
+            "parentCollectionName": "device",
+            "type": "time.Time"
+        },
+        {
+            "field_name": "test",
+            "name": "test",
+            "type": "",
+            "fieldtype": "Custom_Field"
+        },
+        {
+            "name": "FACILITY--ADDRESS : ZIPCODE",
+            "field_name": "address.zipcode",
+            "parentCollectionName": "facility",
+            "type": "int64"
+        },
+        {
+            "name": "ORGANISATION--LOCATION : COORDINATES",
+            "field_name": "location.coordinates",
+            "parentCollectionName": "organisation",
+            "type": "coordinates"
+        },
+        {
+            "name": "ORGANISATION--CONTRACT : DESCRIPTION",
+            "field_name": "contract.description",
+            "parentCollectionName": "organisation",
+            "type": "string"
+        },
+        {
+            "name": "ORGANISATION--PAN NO",
+            "field_name": "pan_no",
+            "parentCollectionName": "organisation",
+            "type": "string"
+        },
+        {
+            "name": "ORGANISATION--CONTRACT : CONTRACT END DATE",
+            "field_name": "contract.contract_end_date",
+            "parentCollectionName": "organisation",
+            "type": "time.Time"
+        },
+        {
+            "name": "ORGANISATION--GST NO",
+            "field_name": "gst_no",
+            "parentCollectionName": "organisation",
+            "type": "string"
+        },
+        {
+            "name": "ORGANISATION--USER TYPE",
+            "field_name": "user_type",
+            "parentCollectionName": "organisation",
+            "type": "string"
+        },
+        {
+            "name": "DEVICE--ID",
+            "field_name": "_id",
+            "parentCollectionName": "device",
+            "reference": true,
+            "orbitalvaule": {
+                "collection_name": "facility",
+                "field": "id"
+            },
+            "type": "string"
+        }
+    ],
+    "FilterParams": [
+        {
+            "convert_To_String": true,
+            "parmasName": "testparams",
+            "parmsDataType": "string",
+            "defaultValue": "nas"
+        }
+    ],
+    "Filter": [
+        {
+            "clause": "AND",
+            "conditions": [
+                {
+                    "column": "facility_name",
+                    "operator": "EQUALS",
+                    "parentCollectionName": "facility",
+                    "type": "string",
+                    "value": "parthi"
+                },
+                {
+                    "column": "org_name",
+                    "operator": "NOTEQUAL",
+                    "parentCollectionName": "organisation",
+                    "type": "string",
+                    "value": "nas"
+                },
+                {
+                    "clause": "OR",
+                    "condition": [
+                        {
+                            "column": "org_id",
+                            "operator": "NOTEQUAL",
+                            "parentCollectionName": "organisation",
+                            "type": "string",
+                            "value": "nas"
+                        },
+                        {
+                            "column": "status",
+                            "operator": "NOTEQUAL",
+                            "parentCollectionName": "device",
+                            "type": "string",
+                            "value": "nas"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
