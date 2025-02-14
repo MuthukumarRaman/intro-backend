@@ -72,14 +72,15 @@ type UserRegister struct {
 }
 
 type SSOUser struct {
-	Id           string    `json:"_id" bson:"_id"`
-	EmailId      string    `json:"email_id" bson:"email_id"`
-	FirstName    string    `json:"first_name" bson:"first_name"`
-	LastName     string    `json:"last_name" bson:"last_name"`
-	ProfileImage string    `json:"profile_image" bson:"profile_image"`
-	ProvideBy    string    `json:"provide_by" bson:"provide_by"`
-	MobileNumber string    `json:"mobile_number" bson:"mobile_number"`
-	Status       string    `json:"status" bson:"status"`
-	CreatedOn    time.Time `json:"created_on" bson:"created_on"`
-	Role         string    `json:"role" bson:"role"`
+	Id            string    `json:"_id" bson:"_id"`
+	EmailId       string    `json:"email_id" bson:"email_id"`
+	FirstName     string    `json:"first_name" bson:"first_name"`
+	LastName      string    `json:"last_name" bson:"last_name"`
+	ProfileImage  string    `json:"profile_image" bson:"profile_image"`
+	EmailVerified bool      `json:"email_verified" bson:"email_verified"`
+	ProvideBy     string    `json:"provide_by" bson:"provide_by"`
+	MobileNumber  string    `json:"mobile_number" bson:"mobile_number"`
+	Status        string    `json:"status" bson:"status"`
+	CreatedOn     time.Time `json:"created_on" bson:"created_on"`
+	Role          string    `json:"role" bson:"role"`
 }

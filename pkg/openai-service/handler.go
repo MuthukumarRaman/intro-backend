@@ -55,203 +55,160 @@ type Property struct {
 }
 
 func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
+
+	// return Property{
+	// 	Type: "object",
+	// 	Properties: map[string]Property{
+	// 		"userProfile": {
+	// 			Type:        "object",
+	// 			Description: "A comprehensive profile where you describe yourself.",
+	// 			Required:    []string{"first_name", "email_id", "gender", "profile_image", "last_name", "my_intro", "bio", "age", "location", "industry", "work_life_philosophy", "professional_journey", "expertise", "hobbies"},
+	// 			Properties: map[string]Property{
+	// 				"my_intro": {
+	// 					Type:        "string",
+	// 					Description: "Write a short introduction about yourself.",
+	// 					Default:     "I am an enthusiastic professional eager to learn and grow.",
+	// 				},
+	// 				"bio": {
+	// 					Type:        "string",
+	// 					Description: "Describe yourself briefly, including your profession and experience.",
+	// 					Default:     "I am a dedicated professional with a strong background in my field.",
+	// 				},
+	// 				"age": {
+	// 					Type:        "number",
+	// 					Description: "Enter your age, calculated from your date of birth.",
+	// 					Default:     "25",
+	// 				},
+	// 				"location": {
+	// 					Type:        "string",
+	// 					Description: "Mention your current location (city and country).",
+	// 					Default:     "Not specified",
+	// 				},
+	// 				"industry": {
+	// 					Type:        "string",
+	// 					Description: "List the industries you have experience in.",
+	// 					Default:     "Technology",
+	// 				},
+	// 				"work_life_philosophy": {
+	// 					Type:        "string",
+	// 					Description: "Share your thoughts on work-life balance and your professional approach.",
+	// 					Default:     "I believe in maintaining a healthy balance between work and personal life.",
+	// 				},
+	// 				"professional_journey": {
+	// 					Type:        "string",
+	// 					Description: "Summarize your career path and what led you to your current role.",
+	// 					Default:     "I started my career with a passion for problem-solving and grew into my current role through continuous learning.",
+	// 				},
+	// 				"expertise": {
+	// 					Type:        "string",
+	// 					Description: "List your key skills and areas of expertise.",
+	// 					Default:     "Problem-solving, Communication, Technical Skills",
+	// 				},
+	// 				"hobbies": {
+	// 					Type:        "string",
+	// 					Description: "Mention your hobbies and activities outside of work.",
+	// 					Default:     "Reading, Traveling, Fitness",
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+
 	return Property{
 		Type: "object",
 		Properties: map[string]Property{
-			// "userProfile": {
-			// 	Type:        "object",
-			// 	Description: "A natural description of who you are as a person",
-			// 	Properties: map[string]Property{
-			// 		"name": {
-			// 			Type:        "string",
-			// 			Description: "The name of the user",
-			// 		},
-			// 		"age": {
-			// 			Type:        "number",
-			// 			Description: "The age of the user",
-			// 		},
-			// 		"location": {
-			// 			Type:        "string",
-			// 			Description: "The location of the user",
-			// 		},
-			// 		"industry": {
-			// 			Type:        "string",
-			// 			Description: "The industry of the user",
-			// 		},
-			// 		"introduction": {
-			// 			Type:        "string",
-			// 			Description: "A brief introduction about yourself, including your name, age, and where you're based",
-			// 		},
-			// 		"professionalStory": {
-			// 			Type:        "string",
-			// 			Description: "Tell us about your professional journey, current role, and what you're passionate about in your work",
-			// 		},
-			// 		"expertise": {
-			// 			Type:        "string",
-			// 			Description: "What are your key areas of expertise and skills?",
-			// 		},
-			// 		"personalInterests": {
-			// 			Type:        "string",
-			// 			Description: "Share what you love to do outside of work - your hobbies, interests, and what makes you unique",
-			// 		},
-			// 		"workStyle": {
-			// 			Type:        "string",
-			// 			Description: "Describe how you prefer to work and collaborate with others",
-			// 		},
-			// 		"aspirations": {
-			// 			Type:        "string",
-			// 			Description: "What are your goals and what kind of opportunities or connections are you looking for?",
-			// 		},
-			// 		"funFact": {
-			// 			Type:        "string",
-			// 			Description: "Share an interesting story or fact about yourself that helps people remember you",
-			// 		},
-			// 	},
-			// },
-			// "onboardingQuestions": {
-			// 	Type:        "object",
-			// 	Description: "Return an onboarding guide as natural language using a structured JSON model. Each question should have a `question` field for the prompt text and a `type` field for the input type (e.g., input, date, textarea, radio).",
-			// 	Properties: map[string]Property{
-			// 		"questions": {
-			// 			Type:        "array",
-			// 			Description: "A list of onboarding questions with their details.",
-			// 			Items: &Property{
-			// 				Type:        "object",
-			// 				Description: "A natural language question to ask the user",
-			// 				Properties: map[string]Property{
-			// 					"question": {
-			// 						Type:        "string",
-			// 						Description: "The text of the question to ask the user.",
-			// 					},
-			// 					"type": {
-			// 						Type:        "string",
-			// 						Description: "The type of input for the question (e.g., input, date, textarea, radio).",
-			// 					},
-			// 					"sampleAnswer": {
-			// 						Type:        "string",
-			// 						Description: "An example answer for the question.",
-			// 					},
-			// 					"dataType": {
-			// 						Type: "string",
-			// 						// enum: ["string", "number", "date", "boolean"],
-			// 						Description: "The type of the answer (string, number, date, or etc).",
-			// 					},
-			// 				},
-			// 			},
-			// 		},
-			// 	},
-			// },
-
-			// "userProfile": {
-			// 	Type:        "object",
-			// 	Description: "A natural description of who you are as a person and give me as a single object",
-			// 	Properties: map[string]Property{
-			// 		"name": {
-			// 			Type:        "string",
-			// 			Description: "The name of the user",
-			// 		},
-			// 		"date_of_birth": {
-			// 			Type:        "string",
-			// 			Format:      "date-time",
-			// 			Description: "The date of birth of the user in ISO 8601 date-time format (e.g., YYYY-MM-DD)",
-			// 		},
-			// 		"age": {
-			// 			Type:        "number",
-			// 			Description: "Calculate the age by using given date of birth",
-			// 		},
-			// 		"location": {
-			// 			Type:        "string",
-			// 			Description: "The location of the user",
-			// 		},
-			// 		"industry": {
-			// 			Type:        "string",
-			// 			Description: "The industry of the user",
-			// 		},
-			// 		"introduction": {
-			// 			Type:        "string",
-			// 			Description: "A brief introduction about yourself, including your name, age, and where you're based",
-			// 		},
-			// 		"professional_story": {
-			// 			Type:        "string",
-			// 			Description: "Tell us about your professional journey, current role, and what you're passionate about in your work",
-			// 		},
-			// 		"expertise": {
-			// 			Type:        "string",
-			// 			Description: "What are your key areas of expertise and skills?",
-			// 		},
-			// 		"personal_interests": {
-			// 			Type:        "string",
-			// 			Description: "Share what you love to do outside of work - your hobbies, interests, and what makes you unique",
-			// 		},
-			// 		"work_style": {
-			// 			Type:        "string",
-			// 			Description: "Describe how you prefer to work and collaborate with others",
-			// 		},
-			// 		"aspirations": {
-			// 			Type:        "string",
-			// 			Description: "What are your goals and what kind of opportunities or connections are you looking for?",
-			// 		},
-			// 		"fun_fact": {
-			// 			Type:        "string",
-			// 			Description: "Share an interesting story or fact about yourself that helps people remember you",
-			// 		},
-			// 	},
-			// },
-
 			"userProfile": {
 				Type:        "object",
 				Description: "A comprehensive profile where you describe yourself.",
-				Required:    []string{"my_intro", "bio", "age", "location", "industry", "work_life_philosophy", "professional_journey", "expertise", "hobbies"},
+				Required:    []string{"first_name", "key_skills", "professional_match_criteria", "email_id", "birth_date", "gender", "profile_image", "experience_years", "last_name", "my_intro", "bio", "age", "location", "industry", "work_life_philosophy", "professional_journey", "expertise", "hobbies"},
 				Properties: map[string]Property{
+					"first_name": {
+						Type:        "string",
+						Description: "Your given name.",
+					},
+					"last_name": {
+						Type:        "string",
+						Description: "Your family name or surname.",
+					},
+					"email_id": {
+						Type:        "string",
+						Description: "Your primary email address.",
+					},
+					"gender": {
+						Type:        "string",
+						Description: "Your gender identity.",
+					},
+					"key_skills": {
+						Type:        "string",
+						Description: "Your Skills identity.",
+					},
+					"birth_date": {
+						Type:        "string",
+						Description: "Your date of birth.",
+					},
+					"professional_match_criteria": {
+						Type:        "string",
+						Description: "User's professional match criteria",
+					},
+					"profile_image": {
+						Type:        "string",
+						Description: "A URL linking to your profile picture.",
+					},
 					"my_intro": {
 						Type:        "string",
-						Description: "Write a short introduction about yourself.",
-						Default:     "I am an enthusiastic professional eager to learn and grow.",
+						Description: "Write a short introduction about yourself. Share a brief overview of who you are, your passions, and what drives you. Mention your core values and what makes you unique. Highlight your enthusiasm for learning, growing, and contributing to your field. Provide insight into how you approach challenges and what excites you the most in your journey.",
 					},
 					"bio": {
 						Type:        "string",
-						Description: "Describe yourself briefly, including your profession and experience.",
-						Default:     "I am a dedicated professional with a strong background in my field.",
+						Description: "Describe yourself briefly, including your profession and experience. Provide an overview of your background, the industries you have worked in, and the skills you have acquired. Highlight key achievements or milestones that have shaped your professional journey. Discuss your strengths and the areas where you excel. Share how your experience and expertise contribute to your current role and aspirations for the future.",
 					},
 					"age": {
 						Type:        "number",
 						Description: "Enter your age, calculated from your date of birth.",
-						Default:     "25",
+					},
+					"experience_years": {
+						Type:        "number",
+						Description: "experience of the user",
 					},
 					"location": {
 						Type:        "string",
-						Description: "Mention your current location (city and country).",
-						Default:     "Not specified",
+						Description: "Automatically filled with the location name based on the geo_location.",
 					},
-					"industry": {
-						Type:        "string",
-						Description: "List the industries you have experience in.",
-						Default:     "Technology",
+					"geo_location": {
+						Type:        "array",
+						Description: "Automatically filled with the location coordinates (longitude, latitude).",
+						Items: &Property{
+							Type: "number",
+						},
+					},
+					"industries": {
+						Type:        "array",
+						Description: "Fill the industry Worked",
+						Items: &Property{
+							Type: "string",
+						},
 					},
 					"work_life_philosophy": {
 						Type:        "string",
 						Description: "Share your thoughts on work-life balance and your professional approach.",
-						Default:     "I believe in maintaining a healthy balance between work and personal life.",
 					},
 					"professional_journey": {
 						Type:        "string",
-						Description: "Summarize your career path and what led you to your current role.",
-						Default:     "I started my career with a passion for problem-solving and grew into my current role through continuous learning.",
+						Description: "Summarize your career path and what led you to your current role.elabrate it",
 					},
 					"expertise": {
 						Type:        "string",
-						Description: "List your key skills and areas of expertise.",
-						Default:     "Problem-solving, Communication, Technical Skills",
+						Description: "List your key skills and areas of expertise.elabrate it",
 					},
 					"hobbies": {
 						Type:        "string",
 						Description: "Mention your hobbies and activities outside of work.",
-						Default:     "Reading, Traveling, Fitness",
 					},
 				},
 			},
 		},
 	}
+
 }
 
 // NewAIConfigModel initializes the AI configuration model
@@ -333,12 +290,15 @@ func GenerateFromAI(client *openai.Client, aiQuery string, targetConfig string, 
 		Functions:    openAIFunctions,
 		FunctionCall: openai.FunctionCall{Name: forcedFunction},
 	}
+
 	ctx := context.Background()
 	// Perform the OpenAI API call
 	resp, err := client.CreateChatCompletion(ctx, req)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println(resp)
 
 	// Parse and return the function call arguments
 	var result map[string]interface{}
@@ -358,7 +318,7 @@ type ResponseModel struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-func GetUserProfile(c *fiber.Ctx) error {
+func GetUserProfile2(c *fiber.Ctx) error {
 
 	// Extract query parameter and body
 	profileID := c.Params("profileId")
@@ -371,26 +331,19 @@ func GetUserProfile(c *fiber.Ctx) error {
 			Details: err.Error(),
 		})
 	}
-
+	var newData = true
 	// Call the controller
 	if profileID != "" {
-		// var err error
-		// result, err = UserProfileUpdateController(profileID, newProfileData)
-		// if err != nil {
-		// 	return c.Status(fiber.StatusInternalServerError).JSON(ResponseModel{
-		// 		Status:  "failure",
-		// 		Message: "Internal server error",
-		// 		Details: err.Error(),
-		// 	})
-		// }
+
 		DataUpdateById(newProfileData, profileID)
+		newData = false
 	}
 
 	client := openai.NewClient("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")
 	var strcut = OpenAIDescriptors{}
 	var aiQuery string
 
-	if result == nil {
+	if newData {
 		// Construct the query
 		aiQuery = fmt.Sprintf(
 			"Turn this user profile into a natural language description based on the following user profile model:\n%s\n"+
@@ -430,15 +383,106 @@ func GetUserProfile(c *fiber.Ctx) error {
 	return helper.SuccessResponse(c, res)
 }
 
+// func DataUpdateById(data map[string]interface{}, updateId string) {
+
+// 	filter := bson.M{
+// 		"_id": updateId,
+// 	}
+
+// 	update := bson.M{
+// 		"$set": data,
+// 	}
+
+// 	database.GetConnection().Collection("user").UpdateOne(context.Background(), filter, update)
+// }
+
+func GetUserProfile(c *fiber.Ctx) error {
+	profileID := c.Params("profileId")
+	var newProfileData map[string]interface{}
+
+	if err := c.BodyParser(&newProfileData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ResponseModel{
+			Status:  "failure",
+			Message: "Error parsing request body",
+			Details: err.Error(),
+		})
+	}
+
+	newData := profileID == ""
+
+	existingProfile1, _ := fetchUserProfile(profileID)
+	if existingProfile1 == nil {
+		newData = true
+	}
+
+	client := openai.NewClient("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")
+
+	var descriptor OpenAIDescriptors
+	aiQuery := buildAIQuery(newData, &descriptor, newProfileData, profileID)
+
+	if newData {
+		res, err := database.GetConnection().Collection("user").InsertOne(context.Background(), newProfileData)
+
+		if err != nil {
+			return helper.BadRequest("Failed to insert data into the database: " + err.Error())
+		}
+
+		profileID = res.InsertedID.(string)
+
+	} else {
+
+		DataUpdateById(newProfileData, profileID)
+	}
+
+	res, err := GenerateFromAI(client, aiQuery, "userProfile", &descriptor)
+	if err != nil {
+		return helper.InternalServerError(err.Error())
+	}
+
+	if res["userProfile"] == nil {
+		return helper.InternalServerError("Open AI not responding")
+	}
+
+	DataUpdateById(res["userProfile"].(map[string]interface{}), profileID)
+
+	return helper.SuccessResponse(c, res)
+}
+
+func buildAIQuery(newData bool, descriptor *OpenAIDescriptors, newProfileData map[string]interface{}, profileID string) string {
+	if newData {
+		return fmt.Sprintf(
+			"Turn this user profile into a natural language description based on the following user profile model:\n%s\n"+
+				"ONLY INTERPRET THE DATA IN THE USER PROFILE DATA PROVIDED. DO NOT MAKE UP ANYTHING ELSE.\n"+
+				"The new information to add to the user profile is:\n%s\n",
+			descriptor.OpenAIDescriptorsConfig().Properties["userProfile"], newProfileData,
+		)
+	}
+
+	existingProfile, err := fetchUserProfile(profileID)
+	if err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf(
+		"Turn this user profile into a natural language description based on the following user profile model:\n%s\n"+
+			"ONLY INTERPRET THE DATA IN THE USER PROFILE DATA PROVIDED. DO NOT MAKE UP ANYTHING ELSE.\n"+
+			"The current user profile data is:\n%s\n"+
+			"The new information to add to the user profile is:\n%s\n",
+		descriptor.OpenAIDescriptorsConfig().Properties["userProfile"], existingProfile, newProfileData,
+	)
+}
+
+func fetchUserProfile(profileID string) (map[string]interface{}, error) {
+	var result map[string]interface{}
+	err := database.GetConnection().Collection("user").FindOne(context.Background(), bson.M{"_id": profileID}).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func DataUpdateById(data map[string]interface{}, updateId string) {
-
-	filter := bson.M{
-		"_id": updateId,
-	}
-
-	update := bson.M{
-		"$set": data,
-	}
-
+	filter := bson.M{"_id": updateId}
+	update := bson.M{"$set": data}
 	database.GetConnection().Collection("user").UpdateOne(context.Background(), filter, update)
 }

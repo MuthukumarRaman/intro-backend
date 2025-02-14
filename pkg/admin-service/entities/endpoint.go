@@ -1,9 +1,9 @@
 package entities
 
 import (
-	"github.com/gofiber/fiber/v2"
-
 	"introme-api/pkg/shared/helper"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func SetupAllRoutes(app *fiber.App) {
@@ -14,9 +14,9 @@ func SetupAllRoutes(app *fiber.App) {
 	SetupDownloadRoutes(app)
 	SetupBulkUploadRoutes(app)
 	SetupDatasets(app)
+	SetupOdooApis(app)
 	SetupLocationRoutes(app)
 	app.Static("/image", fileUploadPath)
-
 }
 
 // Without token access
@@ -35,7 +35,6 @@ func SetupCRUDRoutes(app *fiber.App) {
 	r.Delete("/:collectionName/:id", DeleteById)
 	r.Delete("/:collectionName", DeleteByAll)
 	r.Post("/filter/:collectionName", getDocsHandler)
-
 }
 
 // func SetTesting
@@ -75,4 +74,9 @@ func SetupBulkUploadRoutes(app *fiber.App) {
 func SetupLocationRoutes(app *fiber.App) {
 	r := helper.CreateRouteGroup(app, "/location", "Bulk Api")
 	r.Post("/near", GetNearByUser) //todo pending
+}
+
+func SetupOdooApis(app *fiber.App) {
+	r := helper.CreateRouteGroup(app, "/odoo", "Data Sets")
+	r.Get("/test", OdooConnect)
 }

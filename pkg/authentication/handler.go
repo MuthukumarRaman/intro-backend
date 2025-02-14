@@ -470,6 +470,7 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 		req.Status = "A"
 		req.Id = "USR" + id
 		req.CreatedOn = time.Now()
+		req.EmailVerified = true
 		_, err = database.GetConnection().Collection("user").InsertOne(ctx, req)
 		if err != nil {
 			return helper.BadRequest(err.Error())

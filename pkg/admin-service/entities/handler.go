@@ -3,6 +3,7 @@ package entities
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -484,7 +485,7 @@ func CloneAndInsertData(c *fiber.Ctx) error {
 			{"$match",
 				bson.D{
 					{"org_type", dataMap["org_type"]},
-					// {"acl", bson.D{{"$ne", "N"}}}, //!undone
+					// {"acl", bson.D{{"$ne", "N"}}},
 				},
 			},
 		},
@@ -663,3 +664,42 @@ func GetNearByUser(c *fiber.Ctx) error {
 	return helper.SuccessResponse(c, results)
 
 }
+
+func OdooConnect(c *fiber.Ctx) error {
+
+	// Step 1: Get Odoo Demo Credentials
+	config, err := helper.GetOdooDemoCredentials()
+	if err != nil {
+		return helper.BadRequest("Bad Credentials :" + err.Error())
+	}
+
+	// Step 2: Authenticate
+	err = helper.AuthenticateOdoo(config)
+	if err != nil {
+		return helper.Unexpected("Authentication failed :" + err.Error())
+
+	}
+	// fmt.Println("Authenticated! UID:", config.UID)
+
+	// Step 3: Create a new partner
+	partnerID, err := helper.CreatePartner(config, "New Partner", "partner@example.com", "+123456789")
+	if err != nil {
+		return helper.Unexpected("Failed to create partner:" + err.Error())
+	}
+	fmt.Println("Created Partner ID:", partnerID)
+
+	// Step 4: Fetch and display partners
+	partners, err := helper.GetPartners(config)
+	if err != nil {
+		log.Fatal("Failed to fetch partners:", err)
+	}
+
+	fmt.Println("Odoo Partners:")
+	for _, partner := range partners {
+		fmt.Printf("ID: %v, Name: %v, Email: %v\n", partner["id"], partner["name"], partner["email"])
+	}
+
+	return helper.SuccessResponse(c, partners)
+}
+
+// /xmlrpc/2/common
