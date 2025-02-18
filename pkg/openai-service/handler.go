@@ -138,9 +138,13 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 						Type:        "string",
 						Description: "Your gender identity.",
 					},
+
 					"key_skills": {
-						Type:        "string",
+						Type:        "array",
 						Description: "Your Skills identity.",
+						Items: &Property{
+							Type: "string",
+						},
 					},
 					"birth_date": {
 						Type:        "string",
@@ -188,6 +192,7 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 							Type: "string",
 						},
 					},
+
 					"work_life_philosophy": {
 						Type:        "string",
 						Description: "Share your thoughts on work-life balance and your professional approach.",
