@@ -196,7 +196,7 @@ func UpdateUserPasswordAndDeleteTempData(c *fiber.Ctx) error {
 
 	query := bson.M{"access_key": access_key}
 	//var response []primitive.M
-	response, err := FindDocs("amsort", "temporary_user", query)
+	response, err := FindDocs("temporary_user", query)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to retrieve user", "error": err.Error()})
 	}
@@ -427,7 +427,7 @@ func GroupDataBasedOnRules(c *fiber.Ctx) error {
 	filter := bson.M{"group_name": c.Params("groupname")}
 
 	// var response map[string]interface{}
-	response, err := FindDocs(OrgId, "group", filter)
+	response, err := FindDocs("group", filter)
 	if err != nil {
 		return err
 	}
@@ -592,17 +592,13 @@ func InsertDataDb(orgId string, inputData interface{}, collectionName string) (f
 
 // DatasetsRetrieve  -- METHOD PURPOSE Get the Filter pipeline in Db to show the data
 func DatasetsRetrieve(c *fiber.Ctx) error {
-	//OrgId oming from Header
-	orgId := c.Get("OrgId")
-	if orgId == "" {
-		return BadRequest("Organization Id missing")
-	}
+
 	//Params
 	datasetname := c.Params("datasetname")
 
 	filter := bson.M{"dataSetName": datasetname}
 	// Find the Data from Db
-	response, err := FindDocs(orgId, "dataset_config", filter)
+	response, err := FindDocs("dataset_config", filter)
 	if err != nil {
 		return BadRequest("Invalid  Params value")
 	}
@@ -619,6 +615,7 @@ func DatasetsRetrieve(c *fiber.Ctx) error {
 		return BadRequest("Invalid Body Content from MarshalData")
 
 	}
+
 	var requestBody PaginationRequest
 	if err := c.BodyParser(&requestBody); err != nil {
 		return BadRequest("Invalid Body")
@@ -631,6 +628,7 @@ func DatasetsRetrieve(c *fiber.Ctx) error {
 		pipelinestring := createFilterParams(requestBody.FilterParams, ResponseData["referencepipeline"].(string))
 		Dbpipelinestring = pipelinestring
 	} else {
+
 		// if not there return the pipeine storeed variable data return from ResponseData
 		Dbpipelinestring = ResponseData["pipeline"].(string)
 	}
@@ -638,13 +636,17 @@ func DatasetsRetrieve(c *fiber.Ctx) error {
 	//Get the Collection Name in Database
 	CollectionName := ResponseData["dataSetBaseCollection"].(string)
 	//Body Filter storing to struct
+	// Validate JSON
 
-	// Parse the provided string into a slice of BSON documents for the pipeline.
+	if !json.Valid([]byte(Dbpipelinestring)) {
+		return BadRequest("Pipeline JSON is invalid")
+	}
+
+	// Unmarshal to BSON pipeline
 	pipeline := []primitive.M{}
 	err = json.Unmarshal([]byte(Dbpipelinestring), &pipeline)
 	if err != nil {
-		return BadRequest("Cannot Find the String")
-
+		return BadRequest(fmt.Sprintf("Failed to parse pipeline: %v", err))
 	}
 
 	//finalpipeline -- Build the Final append filter pipeline

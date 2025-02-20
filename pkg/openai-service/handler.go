@@ -211,6 +211,32 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 					},
 				},
 			},
+			"match_profile": {
+				Type:        "object",
+				Description: "Users Data",
+				Properties: map[string]Property{
+					"users": {
+						Type: "array",
+						Items: &Property{
+							Type: "object",
+							Properties: map[string]Property{
+								"id": {
+									Type:        "string",
+									Description: "Id of the user",
+								},
+
+								"interests": {
+									Type: "array",
+									Items: &Property{
+										Type: "string",
+									},
+									Description: "Interests of the user",
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -251,10 +277,22 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 					{
 						Name:        "parseToUserProfileModel",
 						Description: "Parse a user profile description to a JSON model",
-						Parameters:  descriptors.OpenAIDescriptorsConfig(),
+						Parameters:  descriptors.OpenAIDescriptorsConfig().Properties["userProfile"],
 					},
 				},
 				ForcedFunction: "parseToUserProfileModel",
+			},
+			"match_profile": {
+				ModelID:        "gpt-3.5-turbo",
+				TaskDefinition: "Return only the matched users by strictly comparing their interests  using a structured JSON format. DO NOT RETURN USERS WHO DO NOT MATCH.",
+				AIFunctions: []AIFunction{
+					{
+						Name:        "matchUserProfileModel",
+						Description: "Filter and return ONLY the users whose interests match .  Return the user IDs only.",
+						Parameters:  descriptors.OpenAIDescriptorsConfig().Properties["match_profile"],
+					},
+				},
+				ForcedFunction: "matchUserProfileModel",
 			},
 		},
 	}
@@ -314,6 +352,72 @@ func GenerateFromAI(client *openai.Client, aiQuery string, targetConfig string, 
 		}
 	}
 	return result, nil
+}
+
+func ProfileMatchFromAI(client *openai.Client, aiQuery string, targetConfig string, descriptors *OpenAIDescriptors) ([]string, error) {
+	// log.Println("[OPENAI] Calling OpenAI service")
+
+	config := NewAIConfigModel(descriptors)
+	aiConfig, exists := config.Profiles[targetConfig]
+	if !exists {
+		return nil, fmt.Errorf("targetConfig '%s' not found", targetConfig)
+	}
+
+	// Prepare the query and OpenAI request
+	query := aiConfig.TaskDefinition + "\n" + aiQuery
+	modelID := aiConfig.ModelID
+	aiFunctions := aiConfig.AIFunctions
+	forcedFunction := aiConfig.ForcedFunction
+
+	// Convert your AIFunction slice to openai.FunctionDefinition slice
+	var openAIFunctions []openai.FunctionDefinition
+	for _, f := range aiFunctions {
+		openAIFunctions = append(openAIFunctions, openai.FunctionDefinition{
+			Name:        f.Name,
+			Description: f.Description,
+			Parameters:  f.Parameters,
+		})
+	}
+
+	// Create OpenAI Chat request
+	req := openai.ChatCompletionRequest{
+		Model: modelID,
+		Messages: []openai.ChatCompletionMessage{
+			{Role: "user", Content: query},
+		},
+		Functions:    openAIFunctions,
+		FunctionCall: openai.FunctionCall{Name: forcedFunction},
+	}
+
+	ctx := context.Background()
+	// Perform the OpenAI API call
+	resp, err := client.CreateChatCompletion(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract and return user IDs with matching skills, hobbies, and expertise
+	var result struct {
+		Matches []struct {
+			UserID string `json:"user_id"`
+		} `json:"matches"`
+	}
+
+	if len(resp.Choices) > 0 && resp.Choices[0].Message.FunctionCall != nil {
+		err = json.Unmarshal([]byte(resp.Choices[0].Message.FunctionCall.Arguments), &result)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	fmt.Println(resp.Choices[0].Message.FunctionCall)
+	// Collect user IDs
+	var userIDs []string
+	for _, match := range result.Matches {
+		userIDs = append(userIDs, match.UserID)
+	}
+
+	return userIDs, nil
 }
 
 type ResponseModel struct {
@@ -384,6 +488,84 @@ func GetUserProfile2(c *fiber.Ctx) error {
 	}
 
 	DataUpdateById(res["userProfile"].(map[string]interface{}), profileID)
+
+	return helper.SuccessResponse(c, res)
+}
+
+func MatchUserProfile(c *fiber.Ctx) error {
+
+	var primaryUser = map[string]interface{}{
+		"id":        420,
+		"name":      "Siva",
+		"email":     "siva@gmail.com",
+		"age":       29,
+		"location":  "New York",
+		"interests": []string{"reading", "riding", "coding"},
+	}
+
+	// var users []map[string]interface{}
+	var OtherUsers = []map[string]interface{}{
+		{
+			"id":        1,
+			"name":      "John Doe",
+			"email":     "john.doe@example.com",
+			"age":       29,
+			"location":  "New York",
+			"hobbies":   []string{"gaming", "gambling"},
+			"interests": []string{"reading", "hiking", "coding"},
+		},
+		{
+			"id":        2,
+			"name":      "Jane Smith",
+			"email":     "jane.smith@example.com",
+			"age":       34,
+			"location":  "Los Angeles",
+			"hobbies":   []string{"gaming", "gambling"},
+			"interests": []string{"reading", "hiking", "coding"},
+		},
+		{
+			"id":        3,
+			"name":      "Alice Johnson",
+			"email":     "alice.johnson@example.com",
+			"age":       25,
+			"location":  "Chicago",
+			"interests": []string{"music", "yoga", "gaming"},
+		},
+		{
+			"id":        4,
+			"name":      "Alice Johnson",
+			"email":     "alice.johnson@example.com",
+			"age":       25,
+			"location":  "Chicago",
+			"interests": []string{"drinking", "eating"},
+		},
+	}
+
+	var strcut = OpenAIDescriptors{}
+	// aiQuery := fmt.Sprintf(
+	// 	"Find and return ONLY the users from the following list whose skills, hobbies, location, interests, or expertise match the specified criteria. "+
+	// 		"STRICTLY EXCLUDE USERS WHO DO NOT MATCH.\n\n"+
+	// 		"Primary user profile:\n%v\n\n"+
+	// 		"List of other users to check for matches:\n%v\n\n"+
+	// 		"Return only the user IDs in a structured JSON format.",
+	// 	primaryUser, OtherUsers,
+	// )
+	aiQuery := fmt.Sprintf(
+		"You are a strict filtering engine. Your task is to find and return ONLY the users from the following list whose interests have at least TWO matches with the primary user’s interests. "+
+			"DO NOT return users with fewer than TWO common interests. "+
+			"If no users match this condition, return an empty array. "+
+			"STRICTLY FOLLOW THIS RULE.\n\n"+
+			"Primary user profile:\n%v\n\n"+
+			"List of other users to check for matches:\n%v\n\n"+
+			"Output format (no extra text): {\"users\": [{\"id\": 1}, {\"id\": 2}]}.",
+		primaryUser, OtherUsers,
+	)
+
+	client := openai.NewClient("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")
+	res, err := ProfileMatchFromAI(client, aiQuery, "match_profile", &strcut)
+	if err != nil {
+		return helper.InternalServerError(err.Error())
+	}
 
 	return helper.SuccessResponse(c, res)
 }

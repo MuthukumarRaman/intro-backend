@@ -78,5 +78,5 @@ func SetupLocationRoutes(app *fiber.App) {
 
 func SetupOdooApis(app *fiber.App) {
 	r := helper.CreateRouteGroup(app, "/odoo", "Data Sets")
-	r.Get("/test", OdooConnect)
+	r.Post("/test", ParnterCreateAndAddSubscriptions)
 }

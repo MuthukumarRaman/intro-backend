@@ -25,47 +25,28 @@ var fileUploadPath = ""
 var ctx = context.Background()
 
 func PostDocHandler(c *fiber.Ctx) error {
-	// Extract the organization ID from the request headers
-	orgId := c.Get("OrgId")
-	if orgId == "" {
-		// If the organization ID is missing, return a bad request response
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Organization Id missing",
-		})
-	}
 
 	// Get the collection name from the URL parameters
 
-	if c.Params("model_name") == "model_config" || c.Params("model_name") == "data_model" || c.Params("model_name") == "screen" || c.Params("model_name") == "user" { // collectionName == "user"  || collectionName == "group"
-		// If it is one of these special collection names, call a function to handle it
-		return helper.PostDataModelConfig(c)
-	} else if c.Params("model_name") == "organisation" {
-		return CloneAndInsertData(c)
-	} else if c.Params("model_name") == "role" {
-		return Clonedatabasedrolecollection(c)
-	}
+	// if c.Params("model_name") == "model_config" || c.Params("model_name") == "data_model" || c.Params("model_name") == "screen" || c.Params("model_name") == "user" { // collectionName == "user"  || collectionName == "group"
+	// 	// If it is one of these special collection names, call a function to handle it
+	// 	return helper.PostDataModelConfig(c)
+	// } else if c.Params("model_name") == "organisation" {
+	// 	return CloneAndInsertData(c)
+	// } else if c.Params("model_name") == "role" {
+	// 	return Clonedatabasedrolecollection(c)
+	// }
 
 	//struct validation and Insert
-	inputData, errmsg := helper.InsertValidateInDatamodel(c.Params("model_name"), string(c.Body()), orgId)
-	var errmsgs []string
-	if errmsg != nil {
-
-		for _, values := range errmsg {
-			errmsgs = append(errmsgs, values)
-		}
-
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": errmsg})
-	}
 
 	//*WITHOUT STRUCT
-	// var inputData map[string]interface{}
-	// if err := c.BodyParser(&inputData); err != nil {
-	// 	return c.Status(fiber.StatusBadRequest).SendString("Error parsing request body")
-	// }
-	collectionName := CollectionNameGet(c.Params("model_name"), orgId)
+	var inputData map[string]interface{}
+	if err := c.BodyParser(&inputData); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Error parsing request body")
+	}
+	// collectionName := CollectionNameGet(c.Params("model_name"))
 	// Insert the data into the database
-	res, err := database.GetConnection().Collection(collectionName).InsertOne(ctx, inputData)
+	res, err := database.GetConnection().Collection(c.Params("model_name")).InsertOne(ctx, inputData)
 	if err != nil {
 		return helper.BadRequest("Failed to insert data into the database: " + err.Error())
 	}
@@ -615,7 +596,7 @@ func CollectionNameGet(model_name, orgId string) string {
 	filter := bson.M{
 		"model_name": model_name,
 	}
-	Response, err := helper.FindDocs(orgId, "model_config", filter)
+	Response, err := helper.FindDocs("model_config", filter)
 	if err != nil {
 		return ""
 	}
@@ -666,9 +647,8 @@ func GetNearByUser(c *fiber.Ctx) error {
 }
 
 func OdooConnect(c *fiber.Ctx) error {
-
 	// Step 1: Get Odoo Demo Credentials
-	config, err := helper.GetOdooDemoCredentials()
+	config, err := helper.GetOdooConfigFromEnv()
 	if err != nil {
 		return helper.BadRequest("Bad Credentials :" + err.Error())
 	}
@@ -679,10 +659,8 @@ func OdooConnect(c *fiber.Ctx) error {
 		return helper.Unexpected("Authentication failed :" + err.Error())
 
 	}
-	// fmt.Println("Authenticated! UID:", config.UID)
-
 	// Step 3: Create a new partner
-	partnerID, err := helper.CreatePartner(config, "New Partner", "partner@example.com", "+123456789")
+	partnerID, err := helper.CreatePartner(config, "Sivabharathi", "sivabharathi@kriyatec.com", "+916385719863")
 	if err != nil {
 		return helper.Unexpected("Failed to create partner:" + err.Error())
 	}
@@ -702,4 +680,86 @@ func OdooConnect(c *fiber.Ctx) error {
 	return helper.SuccessResponse(c, partners)
 }
 
-// /xmlrpc/2/common
+func OdooTemplate(c *fiber.Ctx) error {
+
+	client, err := helper.NewOdooClient()
+	if err != nil {
+		return helper.Unexpected(err.Error())
+	}
+
+	templates, err := client.GetSubscriptionTemplates()
+	if err != nil {
+		fmt.Printf("Error fetching subscription templates: %v\n", err)
+		return helper.Unexpected(err.Error())
+	}
+
+	for _, template := range templates {
+		fmt.Printf("Template ID: %v, Name: %v\n", template["id"], template["name"])
+	}
+
+	companies, err := client.GetCompanies()
+	if err != nil {
+		fmt.Printf("Error fetching companies: %v\n", err)
+		return helper.Unexpected(err.Error())
+	}
+
+	for _, company := range companies {
+		fmt.Printf("Company ID: %v, Name: %v\n", company["id"], company["name"])
+	}
+	return nil
+}
+
+func ParnterCreateAndAddSubscriptions(c *fiber.Ctx) error {
+
+	var inputData map[string]interface{}
+	if err := c.BodyParser(&inputData); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Error parsing request body")
+	}
+
+	client, err := helper.NewOdooClient()
+	if err != nil {
+		return helper.Unexpected(err.Error())
+	}
+
+	// models, err := client.ListModels()
+	// if err != nil {
+	// 	return helper.Unexpected(err.Error())
+	// }
+
+	// return helper.SuccessResponse(c, models)
+	// templates, err := client.GetSubscriptionTemplates()
+	// if err != nil {
+	// 	fmt.Printf("Error fetching subscription templates: %v\n", err)
+	// 	return helper.Unexpected(err.Error())
+	// }
+
+	// for _, template := range templates {
+	// 	fmt.Printf("Template ID: %v, Name: %v\n", template["id"], template["name"])
+	// }
+	// return helper.SuccessResponse(c, templates)
+
+	userName := inputData["first_name"].(string)
+	email := inputData["email_id"].(string)
+	phone := inputData["mobile_number"].(string)
+
+	partnerId, err := client.CreatePartner(userName, email, phone)
+	if err != nil {
+		return helper.Unexpected(err.Error())
+	}
+	fmt.Println("partner created Successfully")
+
+	subscriptionId, err := client.CreateUserSubscriptions(partnerId)
+	if err != nil {
+		return helper.Unexpected(err.Error())
+	}
+
+	fmt.Println("partner Subscriptions created Successfully")
+
+	res := map[string]interface{}{
+		"partner_id":       partnerId,
+		"subscriptions_id": subscriptionId,
+		"email":            email,
+	}
+
+	return helper.SuccessResponse(c, res)
+}

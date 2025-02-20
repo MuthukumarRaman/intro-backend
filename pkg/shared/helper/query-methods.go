@@ -208,7 +208,7 @@ func Updateformodel(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(response)
 }
 
-func FindDocs(orgId, collection string, filter interface{}) (map[string]interface{}, error) {
+func FindDocs(collection string, filter interface{}) (map[string]interface{}, error) {
 
 	var result map[string]interface{}
 	err := database.GetConnection().Collection(collection).FindOne(ctx, filter).Decode(&result)
