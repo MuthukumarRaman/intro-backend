@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -44,10 +45,9 @@ func GenerateJWTToken(claims jwt.MapClaims, ExpiryMinutes time.Duration) string 
 
 func GetUserTokenValue(c *fiber.Ctx) UserToken {
 	var claim = GetUserClaims(c)
+	fmt.Println(claim)
 	return UserToken{
-		UserId:   claim["id"].(string),
-		UserRole: claim["role"].(string),
-		OrgId:    claim["org_id"].(string),
+		UserId: claim["id"].(string),
 		// Org_name: claim["acl"].(string),
 		// OrgGroup: claim["org_group"].(string),
 	}

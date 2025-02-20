@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	openai "github.com/sashabaranov/go-openai"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // AIProfile represents an individual profile configuration
@@ -271,7 +272,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 			// 	ForcedFunction: "parseToOnboardingModel",
 			// },
 			"userProfile": {
-				ModelID:        "gpt-3.5-turbo",
+				ModelID:        "gpt-4o",
 				TaskDefinition: "Return a user profile as natural language using a JSON structure.",
 				AIFunctions: []AIFunction{
 					{
@@ -283,7 +284,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				ForcedFunction: "parseToUserProfileModel",
 			},
 			"match_profile": {
-				ModelID:        "gpt-3.5-turbo",
+				ModelID:        "gpt-4o",
 				TaskDefinition: "Return only the matched users by strictly comparing their interests  using a structured JSON format. DO NOT RETURN USERS WHO DO NOT MATCH.",
 				AIFunctions: []AIFunction{
 					{
@@ -340,8 +341,6 @@ func GenerateFromAI(client *openai.Client, aiQuery string, targetConfig string, 
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(resp)
 
 	// Parse and return the function call arguments
 	var result map[string]interface{}
@@ -418,6 +417,82 @@ func ProfileMatchFromAI(client *openai.Client, aiQuery string, targetConfig stri
 	}
 
 	return userIDs, nil
+}
+
+func ProfileMatchFromOpenAI(client *openai.Client, aiQuery string, targetConfig string, descriptors *OpenAIDescriptors) (map[string]interface{}, error) {
+	// log.Println("[OPENAI] Calling OpenAI service")
+
+	config := NewAIConfigModel(descriptors)
+	aiConfig, exists := config.Profiles[targetConfig]
+	if !exists {
+		return nil, fmt.Errorf("targetConfig '%s' not found", targetConfig)
+	}
+
+	// Prepare the query and OpenAI request
+	// query := aiQuery
+	modelID := aiConfig.ModelID
+	// Create OpenAI Chat request
+	req := openai.ChatCompletionRequest{
+		Model: modelID,
+
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    "system",
+				Content: "You are an assistant that compares user interests. Return users from 'otherUsers' who have at least one matching interest with the 'primaryUser'.",
+			},
+			// {Role: "user", Content: query},
+			{
+				Role:    "user",
+				Content: aiQuery,
+			},
+		},
+
+		Tools: []openai.Tool{
+			{
+				Type: "function",
+				Function: &openai.FunctionDefinition{
+					Name:        "get_matched_user_id",
+					Description: "Get Matched User",
+					Parameters: Property{
+						Type: "object",
+						Properties: map[string]Property{
+							"user_ids": Property{
+								Type: "array",
+								Items: &Property{
+									Type: "string",
+								},
+								Description: "Matched user IDs",
+							},
+						},
+						Required: []string{"user_ids"},
+					},
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	// Perform the OpenAI API call
+	resp, err := client.CreateChatCompletion(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(resp.Choices[0].Message.ToolCalls[0])
+	fmt.Println(resp.Choices[0].Message.ToolCalls[0].Function.Arguments)
+	// Extract and return user IDs with matching skills, hobbies, and expertise
+
+	var args map[string]interface{}
+
+	if len(resp.Choices) > 0 && resp.Choices[0].Message.ToolCalls[0].Function.Arguments != "" {
+		err := json.Unmarshal([]byte(resp.Choices[0].Message.ToolCalls[0].Function.Arguments), &args)
+		if err != nil {
+			return nil, err
+		}
+		return args, nil
+	}
+
+	return nil, fmt.Errorf("Error Getting Response From GenAI")
 }
 
 type ResponseModel struct {
@@ -515,7 +590,7 @@ func MatchUserProfile(c *fiber.Ctx) error {
 			"interests": []string{"reading", "hiking", "coding"},
 		},
 		{
-			"id":        2,
+			"id":        23,
 			"name":      "Jane Smith",
 			"email":     "jane.smith@example.com",
 			"age":       34,
@@ -537,19 +612,21 @@ func MatchUserProfile(c *fiber.Ctx) error {
 			"email":     "alice.johnson@example.com",
 			"age":       25,
 			"location":  "Chicago",
-			"interests": []string{"drinking", "eating"},
+			"interests": []string{"reading", "coding"},
 		},
 	}
 
 	var strcut = OpenAIDescriptors{}
+
 	// aiQuery := fmt.Sprintf(
 	// 	"Find and return ONLY the users from the following list whose skills, hobbies, location, interests, or expertise match the specified criteria. "+
-	// 		"STRICTLY EXCLUDE USERS WHO DO NOT MATCH.\n\n"+
+	// 		"STRICTLY EXCLUDE USERS WHO DO NOT MATCH WITH PRIMARY USER SKILLS,HOBBIES ETC.\n\n"+
 	// 		"Primary user profile:\n%v\n\n"+
 	// 		"List of other users to check for matches:\n%v\n\n"+
 	// 		"Return only the user IDs in a structured JSON format.",
 	// 	primaryUser, OtherUsers,
 	// )
+
 	aiQuery := fmt.Sprintf(
 		"You are a strict filtering engine. Your task is to find and return ONLY the users from the following list whose interests have at least TWO matches with the primary user’s interests. "+
 			"DO NOT return users with fewer than TWO common interests. "+
@@ -557,31 +634,18 @@ func MatchUserProfile(c *fiber.Ctx) error {
 			"STRICTLY FOLLOW THIS RULE.\n\n"+
 			"Primary user profile:\n%v\n\n"+
 			"List of other users to check for matches:\n%v\n\n"+
-			"Output format (no extra text): {\"users\": [{\"id\": 1}, {\"id\": 2}]}.",
+			"Output format (no extra text): ",
 		primaryUser, OtherUsers,
 	)
 
 	client := openai.NewClient("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")
-	res, err := ProfileMatchFromAI(client, aiQuery, "match_profile", &strcut)
+	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_profile", &strcut)
 	if err != nil {
 		return helper.InternalServerError(err.Error())
 	}
 
 	return helper.SuccessResponse(c, res)
 }
-
-// func DataUpdateById(data map[string]interface{}, updateId string) {
-
-// 	filter := bson.M{
-// 		"_id": updateId,
-// 	}
-
-// 	update := bson.M{
-// 		"$set": data,
-// 	}
-
-// 	database.GetConnection().Collection("user").UpdateOne(context.Background(), filter, update)
-// }
 
 func GetUserProfile(c *fiber.Ctx) error {
 	profileID := c.Params("profileId")
@@ -626,11 +690,11 @@ func GetUserProfile(c *fiber.Ctx) error {
 		return helper.InternalServerError(err.Error())
 	}
 
-	if res["userProfile"] == nil {
+	if res == nil {
 		return helper.InternalServerError("Open AI not responding")
 	}
 
-	DataUpdateById(res["userProfile"].(map[string]interface{}), profileID)
+	DataUpdateById(res, profileID)
 
 	return helper.SuccessResponse(c, res)
 }
@@ -672,4 +736,94 @@ func DataUpdateById(data map[string]interface{}, updateId string) {
 	filter := bson.M{"_id": updateId}
 	update := bson.M{"$set": data}
 	database.GetConnection().Collection("user").UpdateOne(context.Background(), filter, update)
+}
+
+func MatchUserProfileById(c *fiber.Ctx) error {
+
+	// UserId := c.Params("userId")
+	userToken := helper.GetUserTokenValue(c)
+	fmt.Println(userToken)
+	userData, err := fetchUserProfile(userToken.UserId)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+
+	geoLocation := userData["geo_location"].(primitive.A)
+
+	pipeline := bson.A{
+		bson.D{
+			{"$geoNear",
+				bson.D{
+					{"near",
+						bson.D{
+							{"type", "Point"},
+							{"coordinates",
+								geoLocation,
+							},
+						},
+					},
+					{"distanceField", "string"},
+					{"maxDistance", 50000},
+					{"spherical", true},
+				},
+			},
+		},
+		// bson.D{{"$match", bson.D{{"_id", bson.D{{"$ne", inputData.UserId}}}}}},
+	}
+
+	results, err := helper.GetAggregateQueryResult("user", pipeline)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+
+	var strcut = OpenAIDescriptors{}
+
+	aiQuery := fmt.Sprintf(
+		"You are a strict filtering engine. Your task is to find and return ONLY the users from the following list whose key_skills ,expertise have at least ONE matches with the primary user’s key_skills ,expertise. "+
+			"DO NOT return users with fewer than ONE common key_skills ,expertise. "+
+			"If no users match this condition, return an empty array. "+
+			"STRICTLY FOLLOW THIS RULE.\n\n"+
+			"Primary user profile:\n%v\n\n"+
+			"List of other users to check for matches:\n%v\n\n"+
+			"Output format (no extra text): ",
+		userData, results,
+	)
+
+	client := openai.NewClient("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")
+	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_profile", &strcut)
+	if err != nil {
+		return helper.InternalServerError(err.Error())
+	}
+
+	UserIds := res["user_ids"].([]interface{})
+
+	// userPipeline := bson.A{
+	// 	bson.D{
+	// 		{"$match",
+	// 			bson.D{
+	// 				{"_id",
+	// 					bson.D{
+	// 						{"$in",
+	// 							UserIds,
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+	var Userresults []bson.M
+	for _, id := range UserIds {
+		for _, user := range results {
+			if user["_id"] == id {
+				Userresults = append(Userresults, user)
+			}
+		}
+	}
+	// Userresults, err := helper.GetAggregateQueryResult("user", userPipeline)
+	// if err != nil {
+	// 	return helper.BadRequest(err.Error())
+	// }
+
+	return helper.SuccessResponse(c, Userresults)
 }

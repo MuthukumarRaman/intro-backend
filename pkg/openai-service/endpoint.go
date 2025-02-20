@@ -14,5 +14,7 @@ func SetupProfileApis(app *fiber.App) {
 	r := helper.CreateRouteGroup(app, "/profile", "PROFILE API'S")
 	r.Post("/update/:profileId", GetUserProfile)
 
-	r.Get("/match", MatchUserProfile)
+	r.Get("/match", MatchUserProfileById)
+
+	// r.Get("/match/:userId", MatchUserProfileById)
 }

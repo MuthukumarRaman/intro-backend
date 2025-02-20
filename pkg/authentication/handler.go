@@ -455,6 +455,7 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 	}
 
 	var userExists bool
+	var id string
 	var user bson.M
 	database.GetConnection().Collection("user").FindOne(ctx, userFilter).Decode(&user)
 	fmt.Println(user)
@@ -462,8 +463,12 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 		userExists = true
 		// return helper.SuccessResponse(c, user)
 	}
+	if !userExists {
 
-	id := helper.ToString(helper.GetNextSeqNumber("USR"))
+		id = helper.ToString(helper.GetNextSeqNumber("USR"))
+	} else {
+		id = user["_id"].(string)
+	}
 
 	//update new password hash to the table
 	if !userExists {

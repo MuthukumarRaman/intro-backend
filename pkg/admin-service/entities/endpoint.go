@@ -1,6 +1,7 @@
 package entities
 
 import (
+	openaiservice "introme-api/pkg/openai-service"
 	"introme-api/pkg/shared/helper"
 
 	"github.com/gofiber/fiber/v2"
@@ -73,7 +74,7 @@ func SetupBulkUploadRoutes(app *fiber.App) {
 
 func SetupLocationRoutes(app *fiber.App) {
 	r := helper.CreateRouteGroup(app, "/location", "Bulk Api")
-	r.Post("/near", GetNearByUser) //todo pending
+	r.Post("/near", openaiservice.MatchUserProfileById) //todo pending
 }
 
 func SetupOdooApis(app *fiber.App) {
