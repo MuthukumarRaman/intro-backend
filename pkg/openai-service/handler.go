@@ -807,10 +807,28 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			},
 		},
 		bson.D{
-			{"$unwind",
+			{"$addFields",
 				bson.D{
-					{"path", "$result"},
-					{"preserveNullAndEmptyArrays", true},
+					{"userIDS",
+						bson.D{
+							{"$reduce",
+								bson.D{
+									{"input", "$result"},
+									{"initialValue", bson.A{}},
+									{"in",
+										bson.D{
+											{"$concatArrays",
+												bson.A{
+													"$$value",
+													"$$this.user_ids",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -830,6 +848,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			},
 		},
 	}
+	fmt.Println(pipeline)
 
 	results, err := helper.GetAggregateQueryResult("user", pipeline)
 	if err != nil {
@@ -890,7 +909,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			}
 		}
 	}
-	Userresults = append(Userresults, userData)
+	// Userresults = append(Userresults, userData)
 
 	// Userresults, err := helper.GetAggregateQueryResult("user", userPipeline)
 	// if err != nil {
