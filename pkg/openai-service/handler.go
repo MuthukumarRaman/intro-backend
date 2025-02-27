@@ -747,6 +747,12 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	if err != nil {
 		return helper.BadRequest(err.Error())
 	}
+
+	distance := helper.ToInt(c.Params("dis"))
+	if distance == 0 {
+		distance = 50000
+	}
+
 	var data map[string]interface{}
 	err = c.BodyParser(&data)
 	if err != nil {
@@ -791,7 +797,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 						},
 					},
 					{"distanceField", "string"},
-					{"maxDistance", 50000},
+					{"maxDistance", distance},
 					{"spherical", true},
 				},
 			},
@@ -854,6 +860,11 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	if err != nil {
 		return helper.BadRequest(err.Error())
 	}
+	if len(results) == 0 {
+		var Userresults []bson.M
+		Userresults = append(Userresults, userData)
+		return helper.SuccessResponse(c, Userresults)
+	}
 
 	fmt.Println(results, "   ", len(results))
 
@@ -909,7 +920,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			}
 		}
 	}
-	// Userresults = append(Userresults, userData)
+	Userresults = append(Userresults, userData)
 
 	// Userresults, err := helper.GetAggregateQueryResult("user", userPipeline)
 	// if err != nil {
