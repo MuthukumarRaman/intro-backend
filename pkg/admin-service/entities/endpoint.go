@@ -16,6 +16,8 @@ func SetupAllRoutes(app *fiber.App) {
 	SetupBulkUploadRoutes(app)
 	SetupDatasets(app)
 	SetupOdooApis(app)
+	SetupFCMRoutes(app)
+	SetupLiveKitRoutes(app)
 	SetupLocationRoutes(app)
 	app.Static("/image", fileUploadPath)
 }
@@ -80,4 +82,18 @@ func SetupLocationRoutes(app *fiber.App) {
 func SetupOdooApis(app *fiber.App) {
 	r := helper.CreateRouteGroup(app, "/odoo", "Data Sets")
 	r.Post("/test", ParnterCreateAndAddSubscriptions)
+}
+
+func SetupLiveKitRoutes(app *fiber.App) {
+	r := helper.CreateRouteGroup(app, "/livekit", "Data Sets")
+	r.Get("/gettoken/:roomName/:userName", helper.LiveKitGetToken)
+	r.Post("/get_unread", GetUnreadMesssgaeData)
+	r.Put("/update_chat_status", UpdateAllChatHandler)
+	r.Post("/chats", PostChatHandler)
+
+}
+
+func SetupFCMRoutes(app *fiber.App) {
+	r := helper.CreateRouteGroup(app, "/fcm", "Data Sets")
+	r.Post("/send", SendNewFcmMessage)
 }

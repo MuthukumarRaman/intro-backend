@@ -203,3 +203,33 @@ func GetNextSeqNumber(key string) int32 {
 func ToString(input interface{}) string {
 	return fmt.Sprintf("%v", input)
 }
+
+func ToInt(s interface{}) int {
+	switch v := s.(type) {
+	case int:
+		return v
+	case int8:
+		return int(v)
+	case int16:
+		return int(v)
+	case int32:
+		return int(v)
+	case int64:
+		return int(v)
+	case float32:
+		return int(v)
+	case float64:
+		return int(v)
+	case string:
+		if v == "" {
+			return 0
+		}
+		val, err := strconv.ParseInt(v, 10, 32)
+		if err != nil {
+			return 0
+		}
+		return int(val)
+	default:
+		return 0
+	}
+}

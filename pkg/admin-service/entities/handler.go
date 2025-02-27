@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -439,6 +440,181 @@ func putDocByIDHandlers(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
+func UpdateAllChatHandler(c *fiber.Ctx) error {
+
+	// id := c.Params("Id")
+	userToken := helper.GetUserTokenValue(c)
+	fmt.Println(userToken.UserId)
+	filter := bson.M{"to": userToken.UserId}
+	update := bson.M{
+		"$set": bson.M{
+			"status":  "seen",
+			"seen_on": time.Now(),
+		},
+	}
+
+	// Assuming 'ctx' is defined elsewhere in your code
+	res, err := database.GetConnection().Collection("chats").UpdateMany(ctx, filter, update)
+	if err != nil {
+		// Handle the error appropriately, e.g., return an error response
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error updating document",
+			"error":   err.Error(),
+		})
+	}
+
+	return helper.SuccessResponse(c, res)
+}
+
+func PostChatHandler(c *fiber.Ctx) error {
+
+	var data map[string]interface{}
+	err := c.BodyParser(&data)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+	data["date_time"] = time.Now()
+	data["_id"] = uuid.New().String()
+	// Assuming 'ctx' is defined elsewhere in your code
+	res, err := database.GetConnection().Collection("chats").InsertOne(ctx, data)
+	if err != nil {
+		// Handle the error appropriately, e.g., return an error response
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error updating document",
+			"error":   err.Error(),
+		})
+	}
+
+	return helper.SuccessResponse(c, res)
+}
+
+func GetUnreadMesssgaeData(c *fiber.Ctx) error {
+	userToken := helper.GetUserTokenValue(c)
+	pipeline := bson.A{
+
+		bson.D{
+			{"$match",
+				bson.D{
+					{"user_ids",
+						bson.D{
+							{"$in",
+								bson.A{
+									userToken.UserId,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "user"},
+					{"localField", "user_ids"},
+					{"foreignField", "_id"},
+					{"as", "user_result"},
+				},
+			},
+		},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "chats"},
+					{"localField", "_id"},
+					{"foreignField", "chat_id"},
+					{"as", "chat_result"},
+				},
+			},
+		},
+		bson.D{
+			{"$addFields",
+				bson.D{
+					{"unread_message",
+						bson.D{
+							{"$size",
+								bson.D{
+									{"$filter",
+										bson.D{
+											{"input", "$chat_result"},
+											{"as", "chat"},
+											{"cond",
+												bson.D{
+													{"$and",
+														bson.A{
+															bson.D{
+																{"$eq",
+																	bson.A{
+																		"$$chat.to",
+																		userToken.UserId,
+																	},
+																},
+															},
+															bson.D{
+																{"$eq",
+																	bson.A{
+																		"$$chat.status",
+																		"sent",
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		bson.D{
+			{"$set",
+				bson.D{
+					{"last_message",
+						bson.D{
+							{"$last",
+								bson.D{
+									{"$ifNull",
+										bson.A{
+											"$chat_result.message",
+											"",
+										},
+									},
+								},
+							},
+						},
+					},
+					{"last_date_time",
+						bson.D{
+							{"$last",
+								bson.D{
+									{"$ifNull",
+										bson.A{
+											"$chat_result.date_time",
+											"",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	results, err := helper.GetAggregateQueryResult("user_matched", pipeline)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+
+	return helper.SuccessResponse(c, results)
+}
+
 func CloneAndInsertData(c *fiber.Ctx) error {
 	orgId := c.Get("OrgId")
 	if orgId == "" {
@@ -759,6 +935,83 @@ func ParnterCreateAndAddSubscriptions(c *fiber.Ctx) error {
 		"partner_id":       partnerId,
 		"subscriptions_id": subscriptionId,
 		"email":            email,
+	}
+
+	return helper.SuccessResponse(c, res)
+}
+
+// func SendFcmMessage(c *fiber.Ctx) error {
+// 	var req map[string]interface{}
+
+// 	err := c.BodyParser(&req)
+// 	if err != nil {
+// 		return helper.BadRequest(err.Error())
+// 	}
+
+// 	token := req["fcm_token"].(string)
+// 	title := req["title"].(string)
+// 	body := req["body"].(string)
+
+// 	err = helper.SendNewFCMNotification(token, title, body)
+// 	if err != nil {
+// 		return helper.Unexpected(err.Error())
+// 	}
+
+// 	res := map[string]interface{}{
+// 		"message": "Message Sent Successfully",
+// 	}
+
+// 	return helper.SuccessResponse(c, res)
+// }
+
+type FCMMessage struct {
+	ToUsers []string `json:"to_users"`
+	Type    string   `json:"type"`
+}
+
+func SendNewFcmMessage(c *fiber.Ctx) error {
+	var req FCMMessage
+
+	err := c.BodyParser(&req)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+
+	usertoken := helper.GetUserTokenValue(c)
+
+	pipeline := bson.A{
+		bson.D{
+			{"$match",
+				bson.D{
+					{"_id",
+						bson.D{
+							{"$in",
+								req.ToUsers,
+							},
+						},
+					},
+					{"fcm_token", bson.D{{"$exists", true}}},
+				},
+			},
+		},
+	}
+
+	userResults, err := helper.GetAggregateQueryResult("user", pipeline)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+
+	if len(userResults) == 0 {
+		return nil
+	}
+
+	err = helper.SendUserNotification(usertoken.UserId, userResults, req.Type)
+	if err != nil {
+		return helper.Unexpected(err.Error())
+	}
+
+	res := map[string]interface{}{
+		"message": "Message Sent Successfully",
 	}
 
 	return helper.SuccessResponse(c, res)

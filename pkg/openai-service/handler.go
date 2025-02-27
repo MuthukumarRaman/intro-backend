@@ -272,7 +272,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 			// 	ForcedFunction: "parseToOnboardingModel",
 			// },
 			"userProfile": {
-				ModelID:        "gpt-4o",
+				ModelID:        "gpt-4o", //gpt-3.5-turbo
 				TaskDefinition: "Return a user profile as natural language using a JSON structure.",
 				AIFunctions: []AIFunction{
 					{
@@ -284,7 +284,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				ForcedFunction: "parseToUserProfileModel",
 			},
 			"match_profile": {
-				ModelID:        "gpt-4o",
+				ModelID:        "gpt-4o", //gpt-4o
 				TaskDefinition: "Return only the matched users by strictly comparing their interests  using a structured JSON format. DO NOT RETURN USERS WHO DO NOT MATCH.",
 				AIFunctions: []AIFunction{
 					{
@@ -438,7 +438,7 @@ func ProfileMatchFromOpenAI(client *openai.Client, aiQuery string, targetConfig 
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    "system",
-				Content: "You are an assistant that compares user interests. Return users from 'otherUsers' who have at least one matching interest with the 'primaryUser'.",
+				Content: "You are an assistant that compares user key_skills. Return users from 'otherUsers' who have at least one matching key_skills with the 'primaryUser'.",
 			},
 			// {Role: "user", Content: query},
 			{
@@ -523,7 +523,7 @@ func GetUserProfile2(c *fiber.Ctx) error {
 		newData = false
 	}
 
-	client := openai.NewClient("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")
+	client := openai.NewClient("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")
 	var strcut = OpenAIDescriptors{}
 	var aiQuery string
 
@@ -638,7 +638,7 @@ func MatchUserProfile(c *fiber.Ctx) error {
 		primaryUser, OtherUsers,
 	)
 
-	client := openai.NewClient("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")
+	client := openai.NewClient("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")
 	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_profile", &strcut)
 	if err != nil {
 		return helper.InternalServerError(err.Error())
@@ -666,7 +666,7 @@ func GetUserProfile(c *fiber.Ctx) error {
 		newData = true
 	}
 
-	client := openai.NewClient("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")
+	client := openai.NewClient("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")
 
 	var descriptor OpenAIDescriptors
 	aiQuery := buildAIQuery(newData, &descriptor, newProfileData, profileID)
@@ -747,6 +747,13 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	if err != nil {
 		return helper.BadRequest(err.Error())
 	}
+	var data map[string]interface{}
+	err = c.BodyParser(&data)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+
+	// distance := helper.ToInt(data["distance"])
 
 	geoLocation := userData["geo_location"].(primitive.A)
 
@@ -771,10 +778,65 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 		// bson.D{{"$match", bson.D{{"_id", bson.D{{"$ne", inputData.UserId}}}}}},
 	}
 
+	// pipeline=bson.A{
+	// 	bson.D{
+	// 		{"$geoNear",
+	// 			bson.D{
+	// 				{"near",
+	// 					bson.D{
+	// 						{"type", "Point"},
+	// 						{"coordinates",
+	// 							geoLocation,
+	// 						},
+	// 					},
+	// 				},
+	// 				{"distanceField", "string"},
+	// 				{"maxDistance", 50000},
+	// 				{"spherical", true},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$lookup",
+	// 			bson.D{
+	// 				{"from", "user_matched"},
+	// 				{"localField", "_id"},
+	// 				{"foreignField", "user_ids"},
+	// 				{"as", "result"},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$unwind",
+	// 			bson.D{
+	// 				{"path", "$result"},
+	// 				{"preserveNullAndEmptyArrays", true},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$match",
+	// 			bson.D{
+	// 				{"result.user_ids",
+	// 					bson.D{
+	// 						{"$nin",
+	// 							bson.A{
+	// 								userToken.UserId,
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+
 	results, err := helper.GetAggregateQueryResult("user", pipeline)
 	if err != nil {
 		return helper.BadRequest(err.Error())
 	}
+
+	fmt.Println(results, "   ", len(results))
 
 	var strcut = OpenAIDescriptors{}
 
@@ -789,11 +851,19 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 		userData, results,
 	)
 
-	client := openai.NewClient("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")
+	config := openai.DefaultConfig("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")
+	config.OrgID = "org-CmUrsek5G1rJm0RYVMX6om1B"
+
+	client := openai.NewClientWithConfig(config)
+
 	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_profile", &strcut)
+
 	if err != nil {
+		// return nil
 		return helper.InternalServerError(err.Error())
 	}
+
+	fmt.Println(res)
 
 	UserIds := res["user_ids"].([]interface{})
 
@@ -820,6 +890,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			}
 		}
 	}
+
 	// Userresults, err := helper.GetAggregateQueryResult("user", userPipeline)
 	// if err != nil {
 	// 	return helper.BadRequest(err.Error())
