@@ -77,7 +77,7 @@ func SendNewFCMNotification(deviceToken, title, body string, data map[string]str
 // 	return nil
 // }
 
-func SendUserNotification(fromUser string, toUsers []bson.M, notificationType string) error {
+func SendUserNotification(fromUser string, toUsers []bson.M, notificationType string, msg string, chatId string) error {
 
 	var body string
 	var title string
@@ -107,7 +107,7 @@ func SendUserNotification(fromUser string, toUsers []bson.M, notificationType st
 
 		if notificationType == "FRIEND" {
 			title = "Friend Request"
-			body = "<b>" + fullName + "</b> has sent you a friend request"
+			body = fullName + " has sent you a friend request"
 			data = map[string]string{
 				"type":      notificationType,
 				"date_time": time.Now().Format(time.RFC3339),
@@ -116,11 +116,24 @@ func SendUserNotification(fromUser string, toUsers []bson.M, notificationType st
 
 		} else if notificationType == "FRIENDACCEPTED" {
 			title = "Friend Request Accepted"
-			body = "<b>" + fullName + "</b> has accepted your friend request"
+			body = fullName + " has accepted your friend request"
 			data = map[string]string{
 				"type":      notificationType,
 				"date_time": time.Now().Format(time.RFC3339),
 				"image":     fromUserProfileImage,
+			}
+		} else if notificationType == "CHAT" {
+			title = fullName
+			body = msg
+			data = map[string]string{
+				"type":      notificationType,
+				"date_time": time.Now().Format(time.RFC3339),
+				"image":     fromUserProfileImage,
+				"from_id":   fromUser,
+				"to":        toUser,
+				"chat_id":   chatId,
+				"message":   msg,
+				"status":    "sent",
 			}
 		}
 
@@ -156,6 +169,19 @@ func SendUserNotification(fromUser string, toUsers []bson.M, notificationType st
 				}
 
 				database.GetConnection().Collection("user_matched").InsertOne(context.Background(), res)
+			} else if notificationType == "CHAT" {
+
+				res := map[string]interface{}{
+					"_id":       uuid.New().String(),
+					"from":      fromUser,
+					"to":        toUser,
+					"chat_id":   chatId,
+					"message":   msg,
+					"date_time": time.Now(),
+					"status":    "sent",
+				}
+
+				database.GetConnection().Collection("chats").InsertOne(context.Background(), res)
 			}
 
 		}

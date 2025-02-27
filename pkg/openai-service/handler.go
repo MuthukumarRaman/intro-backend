@@ -757,6 +757,27 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 
 	geoLocation := userData["geo_location"].(primitive.A)
 
+	// pipeline := bson.A{
+	// 	bson.D{
+	// 		{"$geoNear",
+	// 			bson.D{
+	// 				{"near",
+	// 					bson.D{
+	// 						{"type", "Point"},
+	// 						{"coordinates",
+	// 							geoLocation,
+	// 						},
+	// 					},
+	// 				},
+	// 				{"distanceField", "string"},
+	// 				{"maxDistance", 50000},
+	// 				{"spherical", true},
+	// 			},
+	// 		},
+	// 	},
+	// 	// bson.D{{"$match", bson.D{{"_id", bson.D{{"$ne", inputData.UserId}}}}}},
+	// }
+
 	pipeline := bson.A{
 		bson.D{
 			{"$geoNear",
@@ -775,61 +796,40 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 				},
 			},
 		},
-		// bson.D{{"$match", bson.D{{"_id", bson.D{{"$ne", inputData.UserId}}}}}},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "user_matched"},
+					{"localField", "_id"},
+					{"foreignField", "user_ids"},
+					{"as", "result"},
+				},
+			},
+		},
+		bson.D{
+			{"$unwind",
+				bson.D{
+					{"path", "$result"},
+					{"preserveNullAndEmptyArrays", true},
+				},
+			},
+		},
+		bson.D{
+			{"$match",
+				bson.D{
+					{"result.user_ids",
+						bson.D{
+							{"$nin",
+								bson.A{
+									userToken.UserId,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
-
-	// pipeline=bson.A{
-	// 	bson.D{
-	// 		{"$geoNear",
-	// 			bson.D{
-	// 				{"near",
-	// 					bson.D{
-	// 						{"type", "Point"},
-	// 						{"coordinates",
-	// 							geoLocation,
-	// 						},
-	// 					},
-	// 				},
-	// 				{"distanceField", "string"},
-	// 				{"maxDistance", 50000},
-	// 				{"spherical", true},
-	// 			},
-	// 		},
-	// 	},
-	// 	bson.D{
-	// 		{"$lookup",
-	// 			bson.D{
-	// 				{"from", "user_matched"},
-	// 				{"localField", "_id"},
-	// 				{"foreignField", "user_ids"},
-	// 				{"as", "result"},
-	// 			},
-	// 		},
-	// 	},
-	// 	bson.D{
-	// 		{"$unwind",
-	// 			bson.D{
-	// 				{"path", "$result"},
-	// 				{"preserveNullAndEmptyArrays", true},
-	// 			},
-	// 		},
-	// 	},
-	// 	bson.D{
-	// 		{"$match",
-	// 			bson.D{
-	// 				{"result.user_ids",
-	// 					bson.D{
-	// 						{"$nin",
-	// 							bson.A{
-	// 								userToken.UserId,
-	// 							},
-	// 						},
-	// 					},
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// }
 
 	results, err := helper.GetAggregateQueryResult("user", pipeline)
 	if err != nil {
@@ -890,6 +890,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			}
 		}
 	}
+	Userresults = append(Userresults, userData)
 
 	// Userresults, err := helper.GetAggregateQueryResult("user", userPipeline)
 	// if err != nil {

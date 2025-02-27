@@ -967,6 +967,8 @@ func ParnterCreateAndAddSubscriptions(c *fiber.Ctx) error {
 type FCMMessage struct {
 	ToUsers []string `json:"to_users"`
 	Type    string   `json:"type"`
+	Message string   `json:"message"`
+	ChatId  string   `json:"chat_id"`
 }
 
 func SendNewFcmMessage(c *fiber.Ctx) error {
@@ -1005,7 +1007,7 @@ func SendNewFcmMessage(c *fiber.Ctx) error {
 		return nil
 	}
 
-	err = helper.SendUserNotification(usertoken.UserId, userResults, req.Type)
+	err = helper.SendUserNotification(usertoken.UserId, userResults, req.Type, req.Message, req.ChatId)
 	if err != nil {
 		return helper.Unexpected(err.Error())
 	}
