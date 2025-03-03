@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -71,10 +72,21 @@ func NewOdooClient() (*OdooClient, error) {
 		return nil, err
 	}
 
-	var uid int
-	err = common.Call("authenticate", []interface{}{config.DB, config.Username, config.Password, map[string]interface{}{}}, &uid)
-	if err != nil || uid == 0 {
-		return nil, err
+	// var uid int
+	// err = common.Call("authenticate", []interface{}{config.DB, config.Username, config.Password, map[string]interface{}{}}, &uid)
+	// if err != nil || uid == 0 {
+	// 	return nil, err
+	// }
+
+	var result interface{}
+	err = common.Call("authenticate", []interface{}{config.DB, config.Username, config.Password, map[string]interface{}{}}, &result)
+	if err != nil {
+		return nil, fmt.Errorf("authentication failed: %w", err)
+	}
+
+	uid, ok := result.(int)
+	if !ok || uid == 0 {
+		return nil, errors.New("authentication failed: invalid credentials or response type mismatch")
 	}
 
 	object, err := xmlrpc.NewClient(config.URL+"/object", nil)

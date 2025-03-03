@@ -341,10 +341,10 @@ func RoleBasedData(c *fiber.Ctx) bson.A {
 // }
 
 func DeleteById(c *fiber.Ctx) error {
-	orgId := c.Get("OrgId")
-	if orgId == "" {
-		return helper.BadRequest("Organization Id missing")
-	}
+	// orgId := c.Get("OrgId")
+	// if orgId == "" {
+	// 	return helper.BadRequest("Organization Id missing")
+	// }
 	collectionName := c.Params("collectionName")
 
 	filter := helper.DocIdFilter(c.Params("id"))
@@ -894,15 +894,17 @@ func ParnterCreateAndAddSubscriptions(c *fiber.Ctx) error {
 
 	client, err := helper.NewOdooClient()
 	if err != nil {
+		fmt.Println("yess")
 		return helper.Unexpected(err.Error())
 	}
 
-	// models, err := client.ListModels()
-	// if err != nil {
-	// 	return helper.Unexpected(err.Error())
-	// }
+	models, err := client.ListModels()
+	if err != nil {
+		fmt.Println("Noo")
+		return helper.Unexpected(err.Error())
+	}
 
-	// return helper.SuccessResponse(c, models)
+	return helper.SuccessResponse(c, models)
 	// templates, err := client.GetSubscriptionTemplates()
 	// if err != nil {
 	// 	fmt.Printf("Error fetching subscription templates: %v\n", err)

@@ -238,6 +238,229 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 					},
 				},
 			},
+			"onboardingQuestions": {
+				Type:        "object",
+				Description: "Return an onboarding guide as natural language using a structured JSON model. Each question should have a `question` field for the prompt text and a `type` field for the input type (e.g., input, date, textarea, radio).",
+				Properties: map[string]Property{
+					"questions": {
+						Type:        "array",
+						Description: "A list of onboarding questions with their details.",
+						Items: &Property{
+							Type:        "object",
+							Description: "A natural language question to ask the user",
+							Properties: map[string]Property{
+								"question": {
+									Type:        "string",
+									Description: "The text of the question to ask the user.",
+								},
+								"type": {
+									Type:        "string",
+									Description: "The type of input for the question (e.g., input, date, textarea, radio).",
+								},
+								"sampleAnswer": {
+									Type:        "string",
+									Description: "An example answer for the question.",
+								},
+								"order": {
+									Type:        "number",
+									Description: "Order Vise view of question",
+								},
+								"dataType": {
+									Type: "string",
+									// enum: ["string", "number", "date", "boolean"],
+									Description: "The type of the answer (string, number, date,textarea, radio,chip or etc).",
+								},
+							},
+						},
+					},
+				},
+			},
+			// "onboardingQuestionsWithModule": {
+			// 	Type:        "object",
+			// 	Description: "Return an onboarding guide as natural language using a structured JSON model. Each question should have a `question` field for the prompt text and a `type` field for the input type (e.g., input, date, textarea, radio).",
+			// 	Properties: map[string]Property{
+			// 		Items: &Property{
+			// 			"Module": {
+			// 				Type:        "object",
+			// 				Description: "A list of onboarding questions with their details.",
+			// 				Properties: map[string]Property{
+			// 					"personalDetails": {
+			// 						Type:        "object",
+			// 						Description: "A list of onboarding questions with their details.",
+			// 						Items: &Property{
+			// 							Type:        "object",
+			// 							Description: "A natural language question to ask the user",
+			// 							Properties: map[string]Property{
+			// 								"question": {
+			// 									Type:        "string",
+			// 									Description: "The text of the question to ask the user.",
+			// 								},
+			// 								"type": {
+			// 									Type:        "string",
+			// 									Description: "The type of input for the question (e.g., input, date, textarea, radio).",
+			// 								},
+			// 								"sampleAnswer": {
+			// 									Type:        "string",
+			// 									Description: "An example answer for the question.",
+			// 								},
+			// 								"order": {
+			// 									Type:        "number",
+			// 									Description: "Order Vise view of question",
+			// 								},
+			// 								"dataType": {
+			// 									Type: "string",
+			// 									// enum: ["string", "number", "date", "boolean"],
+			// 									Description: "The type of the answer (string, number, date,textarea, radio,chip or etc).",
+			// 								},
+			// 							},
+			// 						},
+			// 					},
+			// 					// "personalDetails": [
+			// 					//   {
+			// 					// 	"question": "What is your full name?",
+			// 					// 	"type": "input",
+			// 					// 	"sampleAnswer": "John Doe",
+			// 					// 	"order": 1,
+			// 					// 	"dataType": "string"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "What is your date of birth?",
+			// 					// 	"type": "date",
+			// 					// 	"sampleAnswer": "1990-01-01",
+			// 					// 	"order": 2,
+			// 					// 	"dataType": "date"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "What is your contact number?",
+			// 					// 	"type": "input",
+			// 					// 	"sampleAnswer": "+1234567890",
+			// 					// 	"order": 3,
+			// 					// 	"dataType": "string"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "What is your email address?",
+			// 					// 	"type": "input",
+			// 					// 	"sampleAnswer": "john.doe@example.com",
+			// 					// 	"order": 4,
+			// 					// 	"dataType": "string"
+			// 					//   }
+			// 					// ],
+			// 					// "educationalDetails": [
+			// 					//   {
+			// 					// 	"question": "What is your highest qualification?",
+			// 					// 	"type": "input",
+			// 					// 	"sampleAnswer": "Master’s in Computer Science",
+			// 					// 	"order": 1,
+			// 					// 	"dataType": "string"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "Which university/college did you attend?",
+			// 					// 	"type": "input",
+			// 					// 	"sampleAnswer": "Harvard University",
+			// 					// 	"order": 2,
+			// 					// 	"dataType": "string"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "What was your field of study?",
+			// 					// 	"type": "input",
+			// 					// 	"sampleAnswer": "Computer Science",
+			// 					// 	"order": 3,
+			// 					// 	"dataType": "string"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "What was your year of graduation?",
+			// 					// 	"type": "date",
+			// 					// 	"sampleAnswer": "2015",
+			// 					// 	"order": 4,
+			// 					// 	"dataType": "date"
+			// 					//   }
+			// 					// ],
+			// 					// "personalInterests": [
+			// 					//   {
+			// 					// 	"question": "What are your favorite hobbies?",
+			// 					// 	"type": "chip",
+			// 					// 	"sampleAnswer": "Reading, Traveling, Coding",
+			// 					// 	"order": 1,
+			// 					// 	"dataType": "string"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "Do you enjoy outdoor activities?",
+			// 					// 	"type": "radio",
+			// 					// 	"sampleAnswer": "Yes",
+			// 					// 	"order": 2,
+			// 					// 	"dataType": "boolean"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "What type of books do you like to read?",
+			// 					// 	"type": "textarea",
+			// 					// 	"sampleAnswer": "Science fiction, Mystery, Self-improvement",
+			// 					// 	"order": 3,
+			// 					// 	"dataType": "string"
+			// 					//   },
+			// 					//   {
+			// 					// 	"question": "Are you interested in learning new skills?",
+			// 					// 	"type": "radio",
+			// 					// 	"sampleAnswer": "Yes",
+			// 					// 	"order": 4,
+			// 					// 	"dataType": "boolean"
+			// 					//   }
+			// 					// ]
+			// 				},
+			// 			},
+			// 		}},
+			// },
+			// 		"userProfile": {
+			// 			Type:        "object",
+			// 			Description: "A comprehensive profile where you describe yourself.",
+			// 			Required:    []string{"first_name", "email_id", "gender", "profile_image", "last_name", "my_intro", "bio", "age", "location", "industry", "work_life_philosophy", "professional_journey", "expertise", "hobbies"},
+			// 			Properties: map[string]Property{
+			// 				"my_intro": {
+			// 					Type:        "string",
+			// 					Description: "Write a short introduction about yourself.",
+			// 					Default:     "I am an enthusiastic professional eager to learn and grow.",
+			// 				},
+			// 				"bio": {
+			// 					Type:        "string",
+			// 					Description: "Describe yourself briefly, including your profession and experience.",
+			// 					Default:     "I am a dedicated professional with a strong background in my field.",
+			// 				},
+			// 				"age": {
+			// 					Type:        "number",
+			// 					Description: "Enter your age, calculated from your date of birth.",
+			// 					Default:     "25",
+			// 				},
+			// 				"location": {
+			// 					Type:        "string",
+			// 					Description: "Mention your current location (city and country).",
+			// 					Default:     "Not specified",
+			// 				},
+			// 				"industry": {
+			// 					Type:        "string",
+			// 					Description: "List the industries you have experience in.",
+			// 					Default:     "Technology",
+			// 				},
+			// 				"work_life_philosophy": {
+			// 					Type:        "string",
+			// 					Description: "Share your thoughts on work-life balance and your professional approach.",
+			// 					Default:     "I believe in maintaining a healthy balance between work and personal life.",
+			// 				},
+			// 				"professional_journey": {
+			// 					Type:        "string",
+			// 					Description: "Summarize your career path and what led you to your current role.",
+			// 					Default:     "I started my career with a passion for problem-solving and grew into my current role through continuous learning.",
+			// 				},
+			// 				"expertise": {
+			// 					Type:        "string",
+			// 					Description: "List your key skills and areas of expertise.",
+			// 					Default:     "Problem-solving, Communication, Technical Skills",
+			// 				},
+			// 				"hobbies": {
+			// 					Type:        "string",
+			// 					Description: "Mention your hobbies and activities outside of work.",
+			// 					Default:     "Reading, Traveling, Fitness",
+			// 				},
+			// 			},
+			// 		},
 		},
 	}
 
@@ -271,6 +494,18 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 			// 	},
 			// 	ForcedFunction: "parseToOnboardingModel",
 			// },
+			"onboardingQuestions": {
+				ModelID:        "gpt-3.5-turbo",
+				TaskDefinition: "Return an onboarding guide as natural language using a structured JSON model. Each question should have a `question` field for the prompt text and a `type` field for the input type (e.g., input, date, textarea, radio,number).",
+				AIFunctions: []AIFunction{
+					{
+						Name:        "parseToOnboardingModel",
+						Description: "Parse an onboarding guide description to a JSON model",
+						Parameters:  descriptors.OpenAIDescriptorsConfig().Properties["onboardingQuestions"],
+					},
+				},
+				ForcedFunction: "parseToOnboardingModel",
+			},
 			"userProfile": {
 				ModelID:        "gpt-4o", //gpt-3.5-turbo
 				TaskDefinition: "Return a user profile as natural language using a JSON structure.",
@@ -739,7 +974,7 @@ func DataUpdateById(data map[string]interface{}, updateId string) {
 }
 
 func MatchUserProfileById(c *fiber.Ctx) error {
-
+	var geoLocation primitive.A
 	// UserId := c.Params("userId")
 	userToken := helper.GetUserTokenValue(c)
 	fmt.Println(userToken)
@@ -760,8 +995,12 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	}
 
 	// distance := helper.ToInt(data["distance"])
+	if userData["geo_location"] != nil {
 
-	geoLocation := userData["geo_location"].(primitive.A)
+		geoLocation = userData["geo_location"].(primitive.A)
+	} else {
+		return helper.Unexpected("Update Location")
+	}
 
 	// pipeline := bson.A{
 	// 	bson.D{
@@ -928,4 +1167,86 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	// }
 
 	return helper.SuccessResponse(c, Userresults)
+}
+
+func UpdateProfileById(c *fiber.Ctx) error {
+	profileID := c.Params("profileId")
+	var newProfileData map[string]interface{}
+
+	if err := c.BodyParser(&newProfileData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ResponseModel{
+			Status:  "failure",
+			Message: "Error parsing request body",
+			Details: err.Error(),
+		})
+	}
+
+	newData := profileID == ""
+
+	existingProfile1, _ := fetchUserProfile(profileID)
+	if existingProfile1 == nil {
+		newData = true
+	}
+
+	client := openai.NewClient("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")
+
+	var descriptor OpenAIDescriptors
+	aiQuery := buildAIQuery(newData, &descriptor, newProfileData, profileID)
+
+	if newData {
+		res, err := database.GetConnection().Collection("user").InsertOne(context.Background(), newProfileData)
+
+		if err != nil {
+			return helper.BadRequest("Failed to insert data into the database: " + err.Error())
+		}
+
+		profileID = res.InsertedID.(string)
+
+	} else {
+
+		DataUpdateById(newProfileData, profileID)
+	}
+
+	res, err := GenerateFromAI(client, aiQuery, "userProfile", &descriptor)
+	if err != nil {
+		return helper.InternalServerError(err.Error())
+	}
+
+	if res == nil {
+		return helper.InternalServerError("Open AI not responding")
+	}
+
+	DataUpdateById(res, profileID)
+
+	return helper.SuccessResponse(c, res)
+}
+
+func GetUserOnboardingController(c *fiber.Ctx) error {
+
+	config := openai.DefaultConfig("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")
+	config.OrgID = "org-CmUrsek5G1rJm0RYVMX6om1B"
+
+	client := openai.NewClientWithConfig(config)
+
+	var strcut = OpenAIDescriptors{}
+	questionLimit := 10
+
+	// Construct the AI query string using fmt.Sprintf
+	aiQuery := fmt.Sprintf(
+		"Return a list of questions to enhance the existing user's profile. "+
+			"The aim is to enhance information about the user to optimize their matching with other professional profiles. "+
+			"Ensure this is based on dating-type matching but for professionals. \n"+
+			"The structure of these questions should aim to complete the user data model: \n"+
+			"%s"+
+			"The question limit is a maximum of %d questions \n",
+		// Assuming OpenAIDescriptorsConfig().Properties["userProfile"] is serialized to a string
+		strcut.OpenAIDescriptorsConfig().Properties["userProfile"], questionLimit,
+	)
+
+	res, err := GenerateFromAI(client, aiQuery, "onboardingQuestions", &strcut)
+	if err != nil {
+		return helper.InternalServerError(err.Error())
+	}
+
+	return helper.SuccessResponse(c, res)
 }
