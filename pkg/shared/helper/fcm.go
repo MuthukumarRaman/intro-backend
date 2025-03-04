@@ -16,10 +16,12 @@ import (
 func SendNewFCMNotification(deviceToken, title, body string, data map[string]string) error {
 	// Initialize Firebase App with credentials
 	//opt := option.WithCredentialsFile("service-account.json") // Replace with actual path
+
+	fmt.Println(deviceToken, "device token", title, body)
 	opt := option.WithCredentialsFile("introme-firebase-service.json")
 	// 🔹 Explicitly set Project ID
 	config := &firebase.Config{
-		ProjectID: "introme-847cf", // Replace with actual Firebase Project ID
+		ProjectID: "intro-me-today", // Replace with actual Firebase Project ID
 	}
 	app, err := firebase.NewApp(context.Background(), config, opt)
 	if err != nil {

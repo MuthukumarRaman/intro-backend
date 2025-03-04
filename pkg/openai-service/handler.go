@@ -48,6 +48,7 @@ type OpenAIDescriptors struct{}
 type Property struct {
 	Type        string              `json:"type"`
 	Format      string              `json:"format"`
+	Category    string              `json:"category,omitempty"`
 	Description string              `json:"description,omitempty"`
 	Properties  map[string]Property `json:"properties,omitempty"`
 	Items       *Property           `json:"items,omitempty"`
@@ -240,7 +241,7 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 			},
 			"onboardingQuestions": {
 				Type:        "object",
-				Description: "Return an onboarding guide as natural language using a structured JSON model. Each question should have a `question` field for the prompt text and a `type` field for the input type (e.g., input, date, textarea, radio).",
+				Description: "Return an onboarding guide as natural language using a structured JSON model. Each question should have a `question` field for the prompt text and a `type` field for the input type (e.g., input, date, textarea, radio). All done by category wise",
 				Properties: map[string]Property{
 					"questions": {
 						Type:        "array",
@@ -252,6 +253,7 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 								"question": {
 									Type:        "string",
 									Description: "The text of the question to ask the user.",
+									Category:    "Personal Details",
 								},
 								"type": {
 									Type:        "string",
@@ -265,10 +267,121 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 									Type:        "number",
 									Description: "Order Vise view of question",
 								},
+								"field_name": {
+									Type:        "string",
+									Description: "Generated Question must be to concurrent field name like first_name etc",
+								},
 								"dataType": {
 									Type: "string",
 									// enum: ["string", "number", "date", "boolean"],
 									Description: "The type of the answer (string, number, date,textarea, radio,chip or etc).",
+								},
+								"questions": {
+									Type:        "object",
+									Description: "A comprehensive profile where you describe yourself.",
+									Required:    []string{"first_name", "key_skills", "professional_match_criteria", "email_id", "birth_date", "gender", "profile_image", "experience_years", "last_name", "my_intro", "bio", "age", "location", "industry", "work_life_philosophy", "professional_journey", "expertise", "hobbies"},
+									Properties: map[string]Property{
+										"first_name": {
+											Type:        "string",
+											Description: "Your given name.",
+											Category:    "Personal Details",
+										},
+										"last_name": {
+											Type:        "string",
+											Description: "Your family name or surname.",
+											Category:    "Personal Details",
+										},
+										"middle_name": {
+											Type:        "string",
+											Description: "Your family name or surname.",
+											Category:    "Personal Details",
+										},
+										"birth_date": {
+											Type:        "string",
+											Description: "Your date of birth.",
+											Category:    "Personal Details",
+										},
+										"email_id": {
+											Type:        "string",
+											Description: "Your primary email address.",
+											Category:    "Personal Details",
+										},
+										"gender": {
+											Type:        "string",
+											Description: "Your gender identity.",
+											Category:    "Personal Details",
+										},
+										"age": {
+											Type:        "number",
+											Description: "Enter your age, calculated from your date of birth.",
+											Category:    "Personal Details",
+										},
+										"key_skills": {
+											Type:        "array",
+											Description: "Your Skills identity.",
+											Items: &Property{
+												Type: "string",
+											},
+											Category: "Educational Details",
+										},
+
+										"professional_match_criteria": {
+											Type:        "string",
+											Description: "User's professional match criteria",
+											Category:    "Educational Details",
+										},
+										"profile_image": {
+											Type:        "string",
+											Description: "A URL linking to your profile picture.",
+										},
+										"my_intro": {
+											Type:        "string",
+											Description: "Write a short introduction about yourself. Share a brief overview of who you are, your passions, and what drives you. Mention your core values and what makes you unique. Highlight your enthusiasm for learning, growing, and contributing to your field. Provide insight into how you approach challenges and what excites you the most in your journey.",
+										},
+										"bio": {
+											Type:        "string",
+											Description: "Describe yourself briefly, including your profession and experience. Provide an overview of your background, the industries you have worked in, and the skills you have acquired. Highlight key achievements or milestones that have shaped your professional journey. Discuss your strengths and the areas where you excel. Share how your experience and expertise contribute to your current role and aspirations for the future.",
+										},
+
+										"experience_years": {
+											Type:        "number",
+											Description: "experience of the user",
+										},
+										"location": {
+											Type:        "string",
+											Description: "Automatically filled with the location name based on the geo_location.",
+										},
+										"geo_location": {
+											Type:        "array",
+											Description: "Automatically filled with the location coordinates (longitude, latitude).",
+											Items: &Property{
+												Type: "number",
+											},
+										},
+										"industries": {
+											Type:        "array",
+											Description: "Fill the industry Worked",
+											Items: &Property{
+												Type: "string",
+											},
+										},
+										"work_life_philosophy": {
+											Type:        "string",
+											Description: "Share your thoughts on work-life balance and your professional approach.",
+										},
+										"professional_journey": {
+											Type:        "string",
+											Description: "Summarize your career path and what led you to your current role.elabrate it",
+										},
+										"expertise": {
+											Type:        "string",
+											Description: "List your key skills and areas of expertise.elabrate it",
+										},
+										"hobbies": {
+											Type:        "string",
+											Description: "Mention your hobbies and activities outside of work.",
+										},
+									},
 								},
 							},
 						},
@@ -1223,25 +1336,44 @@ func UpdateProfileById(c *fiber.Ctx) error {
 
 func GetUserOnboardingController(c *fiber.Ctx) error {
 
+	userId := c.Params("userId")
+	var aiQuery string
+	var strcut = OpenAIDescriptors{}
+	questionLimit := 10
+	if userId == "" {
+		aiQuery = fmt.Sprintf(
+			"Return a list of questions to enhance the existing user's profile. "+
+				"The aim is to enhance information about the user to optimize their matching with other professional profiles. "+
+				"Ensure this is based on dating-type matching but for professionals. \n"+
+				"The structure of these questions should aim to complete the user data model: \n"+
+				"%s"+
+				"The question limit is a maximum of %d questions \n",
+			// Assuming OpenAIDescriptorsConfig().Properties["userProfile"] is serialized to a string
+			strcut.OpenAIDescriptorsConfig().Properties["onboardingQuestions"], questionLimit,
+		)
+	} else {
+		var userData map[string]interface{}
+		err := database.GetConnection().Collection("user").FindOne(context.Background(), bson.M{"_id": userId}).Decode(&userData)
+		if err != nil {
+			return helper.BadRequest("User Not Found")
+		}
+		aiQuery = fmt.Sprintf(
+			"Return a list of questions to enhance the existing user's profile.  \n"+
+				"%s"+
+				"Ask Only the remaining new question . \n"+
+				"The current user profile data is: \n"+"%s"+"\n"+
+				"",
+			// Assuming OpenAIDescriptorsConfig().Properties["userProfile"] is serialized to a string
+			strcut.OpenAIDescriptorsConfig().Properties["onboardingQuestions"], userData,
+		)
+	}
+
 	config := openai.DefaultConfig("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")
 	config.OrgID = "org-CmUrsek5G1rJm0RYVMX6om1B"
 
 	client := openai.NewClientWithConfig(config)
 
-	var strcut = OpenAIDescriptors{}
-	questionLimit := 10
-
 	// Construct the AI query string using fmt.Sprintf
-	aiQuery := fmt.Sprintf(
-		"Return a list of questions to enhance the existing user's profile. "+
-			"The aim is to enhance information about the user to optimize their matching with other professional profiles. "+
-			"Ensure this is based on dating-type matching but for professionals. \n"+
-			"The structure of these questions should aim to complete the user data model: \n"+
-			"%s"+
-			"The question limit is a maximum of %d questions \n",
-		// Assuming OpenAIDescriptorsConfig().Properties["userProfile"] is serialized to a string
-		strcut.OpenAIDescriptorsConfig().Properties["userProfile"], questionLimit,
-	)
 
 	res, err := GenerateFromAI(client, aiQuery, "onboardingQuestions", &strcut)
 	if err != nil {

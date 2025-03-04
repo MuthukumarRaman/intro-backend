@@ -47,6 +47,11 @@ func PostDocHandler(c *fiber.Ctx) error {
 	}
 	// collectionName := CollectionNameGet(c.Params("model_name"))
 	// Insert the data into the database
+	if c.Params("model_name") == "chats" {
+		inputData["date_time"] = time.Now()
+		inputData["_id"] = uuid.New().String()
+	}
+
 	res, err := database.GetConnection().Collection(c.Params("model_name")).InsertOne(ctx, inputData)
 	if err != nil {
 		return helper.BadRequest("Failed to insert data into the database: " + err.Error())

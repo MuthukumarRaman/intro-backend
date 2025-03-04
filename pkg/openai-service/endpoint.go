@@ -16,7 +16,7 @@ func SetupProfileApis(app *fiber.App) {
 
 	r.Get("/match", MatchUserProfileById)
 
-	r.Put("/get/onboarding-question", GetUserOnboardingController)
+	r.Get("/get/onboarding-question/:userId?", GetUserOnboardingController)
 
 	// r.Get("/match/:userId", MatchUserProfileById)
 }

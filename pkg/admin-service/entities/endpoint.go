@@ -90,7 +90,6 @@ func SetupLiveKitRoutes(app *fiber.App) {
 	r.Post("/get_unread", GetUnreadMesssgaeData)
 	r.Put("/update_chat_status", UpdateAllChatHandler)
 	r.Post("/chats", PostChatHandler)
-
 }
 
 func SetupFCMRoutes(app *fiber.App) {
