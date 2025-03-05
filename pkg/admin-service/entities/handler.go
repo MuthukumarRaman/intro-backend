@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -1024,4 +1026,37 @@ func SendNewFcmMessage(c *fiber.Ctx) error {
 	}
 
 	return helper.SuccessResponse(c, res)
+}
+
+func UploadFiles(c *fiber.Ctx) error {
+	// Get the uploaded file
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Failed to get file",
+		})
+	}
+
+	// Create a directory if not exists
+	uploadDir := "uploads"
+	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create upload directory",
+		})
+	}
+
+	// Define file path
+	filePath := filepath.Join(uploadDir, file.Filename)
+
+	// Save the file
+	if err := c.SaveFile(file, filePath); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to save file",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message":   "File uploaded successfully",
+		"file_path": filePath,
+	})
 }

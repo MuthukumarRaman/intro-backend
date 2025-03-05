@@ -19,7 +19,8 @@ func SetupAllRoutes(app *fiber.App) {
 	SetupFCMRoutes(app)
 	SetupLiveKitRoutes(app)
 	SetupLocationRoutes(app)
-	app.Static("/image", fileUploadPath)
+	SetupFileUpload(app)
+	app.Static("/image", "./uploads")
 }
 
 // Without token access
@@ -95,4 +96,9 @@ func SetupLiveKitRoutes(app *fiber.App) {
 func SetupFCMRoutes(app *fiber.App) {
 	r := helper.CreateRouteGroup(app, "/fcm", "Data Sets")
 	r.Post("/send", SendNewFcmMessage)
+}
+
+func SetupFileUpload(app *fiber.App) {
+	r := helper.CreateRouteGroup(app, "/upload", "Data Sets")
+	r.Post("/file", UploadFiles)
 }

@@ -245,10 +245,10 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 				Properties: map[string]Property{
 					"questions": {
 						Type:        "array",
-						Description: "A list of onboarding questions with their details.",
+						Description: "A list of onboarding questions with their details in category wise.",
 						Items: &Property{
 							Type:        "object",
-							Description: "A natural language question to ask the user",
+							Description: "A natural language question to ask the user  details in category wise",
 							Properties: map[string]Property{
 								"question": {
 									Type:        "string",
@@ -266,6 +266,10 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 								"order": {
 									Type:        "number",
 									Description: "Order Vise view of question",
+								},
+								"category": {
+									Type:        "string",
+									Description: "questions category like educational details etc",
 								},
 								"field_name": {
 									Type:        "string",
