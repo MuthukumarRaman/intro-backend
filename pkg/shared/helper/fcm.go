@@ -47,7 +47,7 @@ func SendNewFCMNotification(deviceToken, title, body string, data map[string]str
 	// Send FCM Message
 	response, err := client.Send(context.Background(), message)
 	if err != nil {
-		return fmt.Errorf("error sending message: %v", err)
+		return err
 	}
 
 	fmt.Println("FCM Notification Sent Successfully! Response:", response)
@@ -144,49 +144,54 @@ func SendUserNotification(fromUser string, toUsers []bson.M, notificationType st
 			fmt.Println(err.Error())
 		}
 
-		if err == nil {
-			if notificationType == "FRIEND" {
-				res := map[string]interface{}{
-					"_id":        uuid.New().String(),
-					"from":       fromUser,
-					"req_status": "pending",
-					"to":         toUser,
-					"type":       "FRIEND",
-					"created_on": time.Now(),
-					"status":     "sent",
-				}
-				database.GetConnection().Collection("notifications").InsertOne(context.Background(), res)
-			} else if notificationType == "FRIENDACCEPTED" {
-				var userIds []string
-				userIds = append(userIds, fromUser)
-				userIds = append(userIds, toUser)
-				// GetNextSeqNumber("FRIENDSHIP")
-				res := map[string]interface{}{
-					"_id":         uuid.New().String(),
-					"user_ids":    userIds,
-					"type":        "FRIENDACCEPTED",
-					"created_on":  time.Now(),
-					"accepted_by": fromUser,
-					"status":      "Accepted",
-				}
-
-				database.GetConnection().Collection("user_matched").InsertOne(context.Background(), res)
-			} else if notificationType == "CHAT" {
-
-				res := map[string]interface{}{
-					"_id":       uuid.New().String(),
-					"from":      fromUser,
-					"to":        toUser,
-					"chat_id":   chatId,
-					"message":   msg,
-					"date_time": time.Now(),
-					"status":    "sent",
-				}
-
-				database.GetConnection().Collection("chats").InsertOne(context.Background(), res)
+		// if err == nil {
+		if notificationType == "FRIEND" {
+			fmt.Println("friend")
+			res := map[string]interface{}{
+				"_id":        uuid.New().String(),
+				"from":       fromUser,
+				"req_status": "pending",
+				"to":         toUser,
+				"type":       "FRIEND",
+				"created_on": time.Now(),
+				"status":     "sent",
+			}
+			_, err := database.GetConnection().Collection("notifications").InsertOne(context.Background(), res)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		} else if notificationType == "FRIENDACCEPTED" {
+			fmt.Println("FRIENDACCEPTED")
+			var userIds []string
+			userIds = append(userIds, fromUser)
+			userIds = append(userIds, toUser)
+			// GetNextSeqNumber("FRIENDSHIP")
+			res := map[string]interface{}{
+				"_id":         uuid.New().String(),
+				"user_ids":    userIds,
+				"type":        "FRIENDACCEPTED",
+				"created_on":  time.Now(),
+				"accepted_by": fromUser,
+				"status":      "Accepted",
 			}
 
+			database.GetConnection().Collection("user_matched").InsertOne(context.Background(), res)
+		} else if notificationType == "CHAT" {
+
+			res := map[string]interface{}{
+				"_id":       uuid.New().String(),
+				"from":      fromUser,
+				"to":        toUser,
+				"chat_id":   chatId,
+				"message":   msg,
+				"date_time": time.Now(),
+				"status":    "sent",
+			}
+
+			database.GetConnection().Collection("chats").InsertOne(context.Background(), res)
 		}
+
+		// }
 
 	}
 	return nil

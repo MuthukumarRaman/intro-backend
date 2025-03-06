@@ -1140,6 +1140,76 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	// 	// bson.D{{"$match", bson.D{{"_id", bson.D{{"$ne", inputData.UserId}}}}}},
 	// }
 
+	// pipeline := bson.A{
+	// 	bson.D{
+	// 		{"$geoNear",
+	// 			bson.D{
+	// 				{"near",
+	// 					bson.D{
+	// 						{"type", "Point"},
+	// 						{"coordinates",
+	// 							geoLocation,
+	// 						},
+	// 					},
+	// 				},
+	// 				{"distanceField", "string"},
+	// 				{"maxDistance", distance},
+	// 				{"spherical", true},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$lookup",
+	// 			bson.D{
+	// 				{"from", "user_matched"},
+	// 				{"localField", "_id"},
+	// 				{"foreignField", "user_ids"},
+	// 				{"as", "result"},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$addFields",
+	// 			bson.D{
+	// 				{"userIDS",
+	// 					bson.D{
+	// 						{"$reduce",
+	// 							bson.D{
+	// 								{"input", "$result"},
+	// 								{"initialValue", bson.A{}},
+	// 								{"in",
+	// 									bson.D{
+	// 										{"$concatArrays",
+	// 											bson.A{
+	// 												"$$value",
+	// 												"$$this.user_ids",
+	// 											},
+	// 										},
+	// 									},
+	// 								},
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$match",
+	// 			bson.D{
+	// 				{"result.user_ids",
+	// 					bson.D{
+	// 						{"$nin",
+	// 							bson.A{
+	// 								userToken.UserId,
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
 	pipeline := bson.A{
 		bson.D{
 			{"$geoNear",
@@ -1158,6 +1228,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 				},
 			},
 		},
+		bson.D{{"$set", bson.D{{"from_user", userToken.UserId}}}},
 		bson.D{
 			{"$lookup",
 				bson.D{
@@ -1187,6 +1258,89 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 											},
 										},
 									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "notifications"},
+					{"let",
+						bson.D{
+							{"from_user", "$from_user"},
+							{"to_user", "$_id"},
+						},
+					},
+					{"pipeline",
+						bson.A{
+							bson.D{
+								{"$match",
+									bson.D{
+										{"$expr",
+											bson.D{
+												{"$and",
+													bson.A{
+														bson.D{
+															{"$eq",
+																bson.A{
+																	"$$from_user",
+																	"$from",
+																},
+															},
+														},
+														bson.D{
+															{"$eq",
+																bson.A{
+																	"$$to_user",
+																	"$to",
+																},
+															},
+														},
+														bson.D{
+															{"$eq",
+																bson.A{
+																	"pending",
+																	"$req_status",
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{"as", "result"},
+				},
+			},
+		},
+		bson.D{
+			{"$set",
+				bson.D{
+					{"request_sent",
+						bson.D{
+							{"$gt",
+								bson.A{
+									bson.D{
+										{"$size",
+											bson.D{
+												{"$ifNull",
+													bson.A{
+														"$result",
+														bson.A{},
+													},
+												},
+											},
+										},
+									},
+									0,
 								},
 							},
 						},
