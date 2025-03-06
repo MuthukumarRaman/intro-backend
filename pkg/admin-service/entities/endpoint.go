@@ -77,7 +77,8 @@ func SetupBulkUploadRoutes(app *fiber.App) {
 
 func SetupLocationRoutes(app *fiber.App) {
 	r := helper.CreateRouteGroup(app, "/location", "Bulk Api")
-	r.Post("/near/:dis?", openaiservice.MatchUserProfileById) //todo pending
+	r.Post("/near/:dis?", openaiservice.MatchUserProfileById)
+	r.Get("/all_matches", openaiservice.MatchAllUserProfile)
 }
 
 func SetupOdooApis(app *fiber.App) {

@@ -97,10 +97,11 @@ func SendUserNotification(fromUser string, toUsers []bson.M, notificationType st
 	}
 
 	for _, user := range toUsers {
-		firstName := user["first_name"].(string)
-		lastName := user["last_name"].(string)
+		firstName := fromUserData["first_name"].(string)
+		lastName := fromUserData["last_name"].(string)
 		fullName := firstName + " " + lastName
 		fcm_token := user["fcm_token"].(string)
+		fmt.Println(fcm_token)
 		toUser := user["_id"].(string)
 
 		// if user["profile_image"] != nil {

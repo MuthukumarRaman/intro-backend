@@ -1348,10 +1348,25 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 				},
 			},
 		},
+		// bson.D{
+		// 	{"$match",
+		// 		bson.D{
+		// 			{"result.user_ids",
+		// 				bson.D{
+		// 					{"$nin",
+		// 						bson.A{
+		// 							userToken.UserId,
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// },
 		bson.D{
 			{"$match",
 				bson.D{
-					{"result.user_ids",
+					{"userIDS",
 						bson.D{
 							{"$nin",
 								bson.A{
@@ -1436,6 +1451,323 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	// if err != nil {
 	// 	return helper.BadRequest(err.Error())
 	// }
+
+	return helper.SuccessResponse(c, Userresults)
+}
+
+func MatchAllUserProfile(c *fiber.Ctx) error {
+	// var geoLocation primitive.A
+	// UserId := c.Params("userId")
+	userToken := helper.GetUserTokenValue(c)
+	fmt.Println(userToken)
+	userData, err := fetchUserProfile(userToken.UserId)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+
+	// var data map[string]interface{}
+	// err = c.BodyParser(&data)
+	// if err != nil {
+	// 	return helper.BadRequest(err.Error())
+	// }
+
+	// pipeline := bson.A{
+	// 	bson.D{
+	// 		{"$geoNear",
+	// 			bson.D{
+	// 				{"near",
+	// 					bson.D{
+	// 						{"type", "Point"},
+	// 						{"coordinates",
+	// 							geoLocation,
+	// 						},
+	// 					},
+	// 				},
+	// 				{"distanceField", "string"},
+	// 				{"maxDistance", 50000},
+	// 				{"spherical", true},
+	// 			},
+	// 		},
+	// 	},
+	// 	// bson.D{{"$match", bson.D{{"_id", bson.D{{"$ne", inputData.UserId}}}}}},
+	// }
+
+	// pipeline := bson.A{
+	// 	bson.D{
+	// 		{"$geoNear",
+	// 			bson.D{
+	// 				{"near",
+	// 					bson.D{
+	// 						{"type", "Point"},
+	// 						{"coordinates",
+	// 							geoLocation,
+	// 						},
+	// 					},
+	// 				},
+	// 				{"distanceField", "string"},
+	// 				{"maxDistance", distance},
+	// 				{"spherical", true},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$lookup",
+	// 			bson.D{
+	// 				{"from", "user_matched"},
+	// 				{"localField", "_id"},
+	// 				{"foreignField", "user_ids"},
+	// 				{"as", "result"},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$addFields",
+	// 			bson.D{
+	// 				{"userIDS",
+	// 					bson.D{
+	// 						{"$reduce",
+	// 							bson.D{
+	// 								{"input", "$result"},
+	// 								{"initialValue", bson.A{}},
+	// 								{"in",
+	// 									bson.D{
+	// 										{"$concatArrays",
+	// 											bson.A{
+	// 												"$$value",
+	// 												"$$this.user_ids",
+	// 											},
+	// 										},
+	// 									},
+	// 								},
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// 	bson.D{
+	// 		{"$match",
+	// 			bson.D{
+	// 				{"result.user_ids",
+	// 					bson.D{
+	// 						{"$nin",
+	// 							bson.A{
+	// 								userToken.UserId,
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+	pipeline := bson.A{
+
+		bson.D{{"$set", bson.D{{"from_user", userToken.UserId}}}},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "user_matched"},
+					{"localField", "_id"},
+					{"foreignField", "user_ids"},
+					{"as", "result"},
+				},
+			},
+		},
+		bson.D{
+			{"$addFields",
+				bson.D{
+					{"userIDS",
+						bson.D{
+							{"$reduce",
+								bson.D{
+									{"input", "$result"},
+									{"initialValue", bson.A{}},
+									{"in",
+										bson.D{
+											{"$concatArrays",
+												bson.A{
+													"$$value",
+													"$$this.user_ids",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "notifications"},
+					{"let",
+						bson.D{
+							{"from_user", "$from_user"},
+							{"to_user", "$_id"},
+						},
+					},
+					{"pipeline",
+						bson.A{
+							bson.D{
+								{"$match",
+									bson.D{
+										{"$expr",
+											bson.D{
+												{"$and",
+													bson.A{
+														bson.D{
+															{"$eq",
+																bson.A{
+																	"$$from_user",
+																	"$from",
+																},
+															},
+														},
+														bson.D{
+															{"$eq",
+																bson.A{
+																	"$$to_user",
+																	"$to",
+																},
+															},
+														},
+														bson.D{
+															{"$eq",
+																bson.A{
+																	"pending",
+																	"$req_status",
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{"as", "result"},
+				},
+			},
+		},
+		bson.D{
+			{"$set",
+				bson.D{
+					{"request_sent",
+						bson.D{
+							{"$gt",
+								bson.A{
+									bson.D{
+										{"$size",
+											bson.D{
+												{"$ifNull",
+													bson.A{
+														"$result",
+														bson.A{},
+													},
+												},
+											},
+										},
+									},
+									0,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// bson.D{
+		// 	{"$match",
+		// 		bson.D{
+		// 			{"result.user_ids",
+		// 				bson.D{
+		// 					{"$nin",
+		// 						bson.A{
+		// 							userToken.UserId,
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// },
+		bson.D{
+			{"$match",
+				bson.D{
+					{"userIDS",
+						bson.D{
+							{"$nin",
+								bson.A{
+									userToken.UserId,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	fmt.Println(pipeline)
+
+	results, err := helper.GetAggregateQueryResult("user", pipeline)
+	if err != nil {
+		return helper.BadRequest(err.Error())
+	}
+	if len(results) == 0 {
+		var Userresults []bson.M
+		Userresults = append(Userresults, userData)
+		return helper.SuccessResponse(c, Userresults)
+	}
+
+	fmt.Println(results, "   ", len(results))
+
+	var strcut = OpenAIDescriptors{}
+
+	aiQuery := fmt.Sprintf(
+		"You are a strict filtering engine. Your task is to find and return ONLY the users from the following list whose key_skills ,expertise have at least ONE matches with the primary user’s key_skills ,expertise. "+
+			"DO NOT return users with fewer than ONE common key_skills ,expertise. "+
+			"If no users match this condition, return an empty array. "+
+			"STRICTLY FOLLOW THIS RULE.\n\n"+
+			"Primary user profile:\n%v\n\n"+
+			"List of other users to check for matches:\n%v\n\n"+
+			"Output format (no extra text): ",
+		userData, results,
+	)
+
+	config := openai.DefaultConfig("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")
+	config.OrgID = "org-CmUrsek5G1rJm0RYVMX6om1B"
+
+	client := openai.NewClientWithConfig(config)
+
+	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_profile", &strcut)
+
+	if err != nil {
+		// return nil
+		return helper.InternalServerError(err.Error())
+	}
+
+	fmt.Println(res)
+
+	UserIds := res["user_ids"].([]interface{})
+
+	var Userresults []bson.M
+	for _, id := range UserIds {
+		for _, user := range results {
+			if user["_id"] == id {
+				Userresults = append(Userresults, user)
+			}
+		}
+	}
+	Userresults = append(Userresults, userData)
 
 	return helper.SuccessResponse(c, Userresults)
 }
