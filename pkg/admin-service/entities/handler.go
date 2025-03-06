@@ -1057,6 +1057,7 @@ func UploadFiles(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message":   "File uploaded successfully",
+		"file_name": file.Filename,
 		"file_path": filePath,
 	})
 }
