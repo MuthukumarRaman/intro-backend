@@ -1035,6 +1035,7 @@ func GetUserProfile(c *fiber.Ctx) error {
 	} else {
 
 		DataUpdateById(newProfileData, profileID)
+
 	}
 
 	res, err := GenerateFromAI(client, aiQuery, "userProfile", &descriptor)
@@ -1069,6 +1070,7 @@ func buildAIQuery(newData bool, descriptor *OpenAIDescriptors, newProfileData ma
 	return fmt.Sprintf(
 		"Turn this user profile into a natural language description based on the following user profile model:\n%s\n"+
 			"ONLY INTERPRET THE DATA IN THE USER PROFILE DATA PROVIDED. DO NOT MAKE UP ANYTHING ELSE.\n"+
+			"If geo Location Changed in New Data change geo location of old data also:\n%s\n"+
 			"The current user profile data is:\n%s\n"+
 			"The new information to add to the user profile is:\n%s\n",
 		descriptor.OpenAIDescriptorsConfig().Properties["userProfile"], existingProfile, newProfileData,
@@ -1113,7 +1115,6 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 
 	// distance := helper.ToInt(data["distance"])
 	if userData["geo_location"] != nil {
-
 		geoLocation = userData["geo_location"].(primitive.A)
 	} else {
 		return helper.Unexpected("Update Location")
