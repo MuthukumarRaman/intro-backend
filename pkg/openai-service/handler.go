@@ -830,18 +830,24 @@ func ProfileMatchFromOpenAI(client *openai.Client, aiQuery string, targetConfig 
 		return nil, err
 	}
 
-	fmt.Println(resp.Choices[0].Message.ToolCalls[0])
-	fmt.Println(resp.Choices[0].Message.ToolCalls[0].Function.Arguments)
 	// Extract and return user IDs with matching skills, hobbies, and expertise
 
 	var args map[string]interface{}
 
-	if len(resp.Choices) > 0 && resp.Choices[0].Message.ToolCalls[0].Function.Arguments != "" {
+	if len(resp.Choices) > 0 &&
+		len(resp.Choices[0].Message.ToolCalls) > 0 &&
+		resp.Choices[0].Message.ToolCalls[0].Function.Arguments != "" {
+
 		err := json.Unmarshal([]byte(resp.Choices[0].Message.ToolCalls[0].Function.Arguments), &args)
 		if err != nil {
 			return nil, err
 		}
 		return args, nil
+	}
+	if len(resp.Choices) == 0 &&
+		len(resp.Choices[0].Message.ToolCalls) == 0 {
+
+		return nil, nil
 	}
 
 	return nil, fmt.Errorf("Error Getting Response From GenAI")
@@ -1099,6 +1105,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	fmt.Println(userToken)
 	userData, err := fetchUserProfile(userToken.UserId)
 	if err != nil {
+		fmt.Println("yess", userToken.UserId)
 		return helper.BadRequest(err.Error())
 	}
 
@@ -1120,97 +1127,6 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 		return helper.Unexpected("Update Location")
 	}
 
-	// pipeline := bson.A{
-	// 	bson.D{
-	// 		{"$geoNear",
-	// 			bson.D{
-	// 				{"near",
-	// 					bson.D{
-	// 						{"type", "Point"},
-	// 						{"coordinates",
-	// 							geoLocation,
-	// 						},
-	// 					},
-	// 				},
-	// 				{"distanceField", "string"},
-	// 				{"maxDistance", 50000},
-	// 				{"spherical", true},
-	// 			},
-	// 		},
-	// 	},
-	// 	// bson.D{{"$match", bson.D{{"_id", bson.D{{"$ne", inputData.UserId}}}}}},
-	// }
-
-	// pipeline := bson.A{
-	// 	bson.D{
-	// 		{"$geoNear",
-	// 			bson.D{
-	// 				{"near",
-	// 					bson.D{
-	// 						{"type", "Point"},
-	// 						{"coordinates",
-	// 							geoLocation,
-	// 						},
-	// 					},
-	// 				},
-	// 				{"distanceField", "string"},
-	// 				{"maxDistance", distance},
-	// 				{"spherical", true},
-	// 			},
-	// 		},
-	// 	},
-	// 	bson.D{
-	// 		{"$lookup",
-	// 			bson.D{
-	// 				{"from", "user_matched"},
-	// 				{"localField", "_id"},
-	// 				{"foreignField", "user_ids"},
-	// 				{"as", "result"},
-	// 			},
-	// 		},
-	// 	},
-	// 	bson.D{
-	// 		{"$addFields",
-	// 			bson.D{
-	// 				{"userIDS",
-	// 					bson.D{
-	// 						{"$reduce",
-	// 							bson.D{
-	// 								{"input", "$result"},
-	// 								{"initialValue", bson.A{}},
-	// 								{"in",
-	// 									bson.D{
-	// 										{"$concatArrays",
-	// 											bson.A{
-	// 												"$$value",
-	// 												"$$this.user_ids",
-	// 											},
-	// 										},
-	// 									},
-	// 								},
-	// 							},
-	// 						},
-	// 					},
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// 	bson.D{
-	// 		{"$match",
-	// 			bson.D{
-	// 				{"result.user_ids",
-	// 					bson.D{
-	// 						{"$nin",
-	// 							bson.A{
-	// 								userToken.UserId,
-	// 							},
-	// 						},
-	// 					},
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// }
 	pipeline := bson.A{
 		bson.D{
 			{"$geoNear",
@@ -1380,7 +1296,6 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			},
 		},
 	}
-	fmt.Println(pipeline)
 
 	results, err := helper.GetAggregateQueryResult("user", pipeline)
 	// if err != nil {
@@ -1418,6 +1333,11 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 		// return nil
 		return helper.InternalServerError(err.Error())
 	}
+	if res == nil {
+		var userIds []string
+		userIds = append(userIds, userToken.UserId)
+		res["user_ids"] = userIds
+	}
 
 	fmt.Println(res)
 
@@ -1439,14 +1359,27 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	// 	},
 	// }
 	var Userresults []bson.M
+	seen := make(map[interface{}]bool) // Track unique _id values
+
+	// Iterate over user IDs and filter results
 	for _, id := range UserIds {
 		for _, user := range results {
 			if user["_id"] == id {
-				Userresults = append(Userresults, user)
+				if !seen[id] { // Check if already added
+					Userresults = append(Userresults, user)
+					seen[id] = true
+				}
 			}
 		}
 	}
-	Userresults = append(Userresults, userData)
+
+	// Add userData if it's not already in Userresults
+	if userID, exists := userData["_id"]; exists {
+		if !seen[userID] { // Check if userData is unique
+			Userresults = append(Userresults, userData)
+			seen[userID] = true
+		}
+	}
 
 	// Userresults, err := helper.GetAggregateQueryResult("user", userPipeline)
 	// if err != nil {
