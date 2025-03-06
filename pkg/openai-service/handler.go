@@ -1383,9 +1383,9 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	fmt.Println(pipeline)
 
 	results, err := helper.GetAggregateQueryResult("user", pipeline)
-	if err != nil {
-		return helper.BadRequest(err.Error())
-	}
+	// if err != nil {
+	// 	return helper.BadRequest(err.Error())
+	// }
 	if len(results) == 0 {
 		var Userresults []bson.M
 		Userresults = append(Userresults, userData)
@@ -1720,9 +1720,9 @@ func MatchAllUserProfile(c *fiber.Ctx) error {
 	fmt.Println(pipeline)
 
 	results, err := helper.GetAggregateQueryResult("user", pipeline)
-	if err != nil {
-		return helper.BadRequest(err.Error())
-	}
+	// if err != nil {
+	// 	return helper.BadRequest(err.Error())
+	// }
 	if len(results) == 0 {
 		var Userresults []bson.M
 		Userresults = append(Userresults, userData)
