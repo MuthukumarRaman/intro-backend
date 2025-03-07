@@ -445,6 +445,7 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 
 	// ctx := context.Background()
 	var req SSOUser
+	var tokenId string
 	err := c.BodyParser(&req)
 	if err != nil {
 		return helper.BadRequest(err.Error())
@@ -466,8 +467,10 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 	if !userExists {
 
 		id = helper.ToString(helper.GetNextSeqNumber("USR"))
+		tokenId = "USR" + id
 	} else {
 		id = user["_id"].(string)
+		tokenId = id
 	}
 
 	//update new password hash to the table
@@ -485,7 +488,7 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 
 	// If the password is valid, generate a JWT token
 	claims := helper.GetNewJWTClaim()
-	claims["id"] = id
+	claims["id"] = tokenId
 	claims["role"] = "user"
 
 	// claims["acl"] = user["org_id"].(string)
