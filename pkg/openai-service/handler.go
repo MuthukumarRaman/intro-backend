@@ -636,7 +636,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				ForcedFunction: "parseToUserProfileModel",
 			},
 			"match_profile": {
-				ModelID:        "gpt-4o", //gpt-4o
+				ModelID:        "gpt-3.5-turbo", //gpt-4o
 				TaskDefinition: "Return only the matched users by strictly comparing their interests  using a structured JSON format. DO NOT RETURN USERS WHO DO NOT MATCH.",
 				AIFunctions: []AIFunction{
 					{
@@ -787,12 +787,24 @@ func ProfileMatchFromOpenAI(client *openai.Client, aiQuery string, targetConfig 
 	req := openai.ChatCompletionRequest{
 		Model: modelID,
 
+		// Messages: []openai.ChatCompletionMessage{
+		// 	{
+		// 		Role:    "system",
+		// 		Content: "You are an assistant that compares user key_skills. Return users from 'otherUsers' who have at least one matching key_skills with the 'primaryUser'.",
+		// 	},
+		// 	// {Role: "user", Content: query},
+		// 	{
+		// 		Role:    "user",
+		// 		Content: aiQuery,
+		// 	},
+		// },
 		Messages: []openai.ChatCompletionMessage{
 			{
-				Role:    "system",
-				Content: "You are an assistant that compares user key_skills. Return users from 'otherUsers' who have at least one matching key_skills with the 'primaryUser'.",
+				Role: "system",
+				Content: "You are an assistant that compares users. Return users from 'otherUsers' who have at least one matching attribute with the 'primaryUser'. " +
+					"For each matched user, return a match_type and a match_reason. " +
+					"The match_reason must be exactly three lines long, providing a clear explanation of why the match was made.",
 			},
-			// {Role: "user", Content: query},
 			{
 				Role:    "user",
 				Content: aiQuery,
@@ -803,20 +815,35 @@ func ProfileMatchFromOpenAI(client *openai.Client, aiQuery string, targetConfig 
 			{
 				Type: "function",
 				Function: &openai.FunctionDefinition{
-					Name:        "get_matched_user_id",
-					Description: "Get Matched User",
+					Name:        "get_matched_users",
+					Description: "Get Matched Users with match type and reason",
 					Parameters: Property{
 						Type: "object",
 						Properties: map[string]Property{
-							"user_ids": Property{
+							"matched_users": Property{
 								Type: "array",
 								Items: &Property{
-									Type: "string",
+									Type: "object",
+									Properties: map[string]Property{
+										"user_id": {
+											Type:        "string",
+											Description: "Matched user ID",
+										},
+										"match_type": {
+											Type:        "string",
+											Description: "Type of match (e.g., Synergy, Connection, Fit)",
+										},
+										"match_reason": {
+											Type:        "string",
+											Description: "Reason why this user is a match",
+										},
+									},
+									Required: []string{"user_id", "match_type", "match_reason"},
 								},
-								Description: "Matched user IDs",
+								Description: "Array of matched users with details",
 							},
 						},
-						Required: []string{"user_ids"},
+						Required: []string{"matched_users"},
 					},
 				},
 			},
@@ -1105,7 +1132,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	fmt.Println(userToken)
 	userData, err := fetchUserProfile(userToken.UserId)
 	if err != nil {
-		fmt.Println("yess", userToken.UserId)
+
 		return helper.BadRequest(err.Error())
 	}
 
@@ -1298,9 +1325,11 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	}
 
 	results, err := helper.GetAggregateQueryResult("user", pipeline)
+
 	// if err != nil {
 	// 	return helper.BadRequest(err.Error())
 	// }
+
 	if len(results) == 0 {
 		var Userresults []bson.M
 		Userresults = append(Userresults, userData)
@@ -1308,12 +1337,12 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	}
 
 	fmt.Println(results, "   ", len(results))
-
 	var strcut = OpenAIDescriptors{}
-
 	aiQuery := fmt.Sprintf(
-		"You are a strict filtering engine. Your task is to find and return ONLY the users from the following list whose key_skills ,expertise have at least ONE matches with the primary user’s key_skills ,expertise. "+
-			"DO NOT return users with fewer than ONE common key_skills ,expertise. "+
+		"You are a strict filtering engine. Your task is to find and return ONLY the users from the following list whose attributes have meaningful similarities with the primary user. "+
+			"Compare the following attributes: key_skills, expertise, experience, industry, education, and other relevant fields. "+
+			"Return users who share AT LEAST ONE strong commonality in any of these attributes. "+
+			"DO NOT return users with fewer than ONE strong common attribute. "+
 			"If no users match this condition, return an empty array. "+
 			"STRICTLY FOLLOW THIS RULE.\n\n"+
 			"Primary user profile:\n%v\n\n"+
@@ -1325,49 +1354,45 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	config := openai.DefaultConfig("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")
 	config.OrgID = "org-CmUrsek5G1rJm0RYVMX6om1B"
 
+	// var res map[string]interface{}
 	client := openai.NewClientWithConfig(config)
-
 	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_profile", &strcut)
 
 	if err != nil {
 		// return nil
 		return helper.InternalServerError(err.Error())
 	}
+
+	// return helper.SuccessResponse(c, res)
 	if res == nil {
-		var userIds []string
-		userIds = append(userIds, userToken.UserId)
-		res["user_ids"] = userIds
+		var userIds []interface{}
+		// userIds = append(userIds, userToken.UserId)
+		newRes := map[string]interface{}{
+			"user_id":      userToken.UserId,
+			"match_reason": "Proficiency in Angular and Node.js with experience in industry-relevant technologies like Go, sharing professional focus and skills.",
+			"match_type":   "Fit",
+		}
+		userIds = append(userIds, newRes)
+
+		res["matched_users"] = userIds
 	}
 
-	fmt.Println(res)
+	matchedUserData := res["matched_users"].([]interface{})
 
-	UserIds := res["user_ids"].([]interface{})
-
-	// userPipeline := bson.A{
-	// 	bson.D{
-	// 		{"$match",
-	// 			bson.D{
-	// 				{"_id",
-	// 					bson.D{
-	// 						{"$in",
-	// 							UserIds,
-	// 						},
-	// 					},
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// }
 	var Userresults []bson.M
 	seen := make(map[interface{}]bool) // Track unique _id values
 
 	// Iterate over user IDs and filter results
-	for _, id := range UserIds {
+	for _, users := range matchedUserData {
+		userMap := users.(map[string]interface{})
 		for _, user := range results {
-			if user["_id"] == id {
-				if !seen[id] { // Check if already added
+			userId := userMap["user_id"].(string)
+			if user["_id"] == userId {
+				if !seen[userId] { // Check if already added
+					user["match_reason"] = userMap["match_reason"].(string)
+					user["match_type"] = userMap["match_type"].(string)
 					Userresults = append(Userresults, user)
-					seen[id] = true
+					seen[userId] = true
 				}
 			}
 		}
@@ -1380,11 +1405,6 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			seen[userID] = true
 		}
 	}
-
-	// Userresults, err := helper.GetAggregateQueryResult("user", userPipeline)
-	// if err != nil {
-	// 	return helper.BadRequest(err.Error())
-	// }
 
 	return helper.SuccessResponse(c, Userresults)
 }
@@ -1656,6 +1676,7 @@ func MatchAllUserProfile(c *fiber.Ctx) error {
 	// if err != nil {
 	// 	return helper.BadRequest(err.Error())
 	// }
+
 	if len(results) == 0 {
 		var Userresults []bson.M
 		Userresults = append(Userresults, userData)
@@ -1663,9 +1684,7 @@ func MatchAllUserProfile(c *fiber.Ctx) error {
 	}
 
 	fmt.Println(results, "   ", len(results))
-
 	var strcut = OpenAIDescriptors{}
-
 	aiQuery := fmt.Sprintf(
 		"You are a strict filtering engine. Your task is to find and return ONLY the users from the following list whose key_skills ,expertise have at least ONE matches with the primary user’s key_skills ,expertise. "+
 			"DO NOT return users with fewer than ONE common key_skills ,expertise. "+
@@ -1689,18 +1708,61 @@ func MatchAllUserProfile(c *fiber.Ctx) error {
 		return helper.InternalServerError(err.Error())
 	}
 
-	fmt.Println(res)
+	// fmt.Println(res)
 
-	UserIds := res["user_ids"].([]interface{})
+	// UserIds := res["user_ids"].([]interface{})
 
 	var Userresults []bson.M
-	for _, id := range UserIds {
+	// for _, id := range UserIds {
+	// 	for _, user := range results {
+	// 		if user["_id"] == id {
+	// 			Userresults = append(Userresults, user)
+	// 		}
+	// 	}
+	// }
+
+	if res == nil {
+		var userIds []interface{}
+		// userIds = append(userIds, userToken.UserId)
+		newRes := map[string]interface{}{
+			"user_id":      userToken.UserId,
+			"match_reason": "Proficiency in Angular and Node.js with experience in industry-relevant technologies like Go, sharing professional focus and skills.",
+			"match_type":   "Fit",
+		}
+		userIds = append(userIds, newRes)
+
+		res["matched_users"] = userIds
+	}
+
+	matchedUserData := res["matched_users"].([]interface{})
+
+	// var Userresults []bson.M
+	seen := make(map[interface{}]bool) // Track unique _id values
+
+	// Iterate over user IDs and filter results
+	for _, users := range matchedUserData {
+		userMap := users.(map[string]interface{})
 		for _, user := range results {
-			if user["_id"] == id {
-				Userresults = append(Userresults, user)
+			userId := userMap["user_id"].(string)
+			if user["_id"] == userId {
+				if !seen[userId] { // Check if already added
+					user["match_reason"] = userMap["match_reason"].(string)
+					user["match_type"] = userMap["match_type"].(string)
+					Userresults = append(Userresults, user)
+					seen[userId] = true
+				}
 			}
 		}
 	}
+
+	// Add userData if it's not already in Userresults
+	if userID, exists := userData["_id"]; exists {
+		if !seen[userID] { // Check if userData is unique
+			Userresults = append(Userresults, userData)
+			seen[userID] = true
+		}
+	}
+
 	Userresults = append(Userresults, userData)
 
 	return helper.SuccessResponse(c, Userresults)

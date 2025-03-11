@@ -65,7 +65,7 @@ func UploadFile(fileIn *multipart.FileHeader, key string) (bool, string) {
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   bytes.NewReader(buf.Bytes()),
-		ACL:    aws.String("public-read"),
+		ACL:    aws.String("public-read"), ContentType: aws.String(filepath.Ext(fileIn.Filename)),
 	})
 	if err != nil {
 		isErrExist = true
@@ -76,32 +76,33 @@ func UploadFile(fileIn *multipart.FileHeader, key string) (bool, string) {
 }
 
 func FileUpload(c *fiber.Ctx) error {
-	orgId := c.Get("OrgId")
-	if orgId == "" {
-		return BadRequest("Organization Id missing")
-	}
+
 	fileCategory := c.Params("folder") // c.Params("category")
-	refId := c.Params("refId")
-	request, err := c.MultipartForm()
+
+	// request, err := c.MultipartForm()
+	// if err != nil {
+	// 	return c.Status(422).JSON(fiber.Map{"errors": err.Error()})
+	// }
+
+	form, err := c.MultipartForm()
 	if err != nil {
-		return c.Status(422).JSON(fiber.Map{"errors": err.Error()})
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{"errors": "Failed to parse multipart form: " + err.Error()})
+	}
+	// Get the files under the "file" key
+	files, ok := form.File["file"]
+	if !ok || len(files) == 0 {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{"errors": "No file uploaded under 'file' key"})
 	}
 	token := GetUserTokenValue(c)
-	// year := time.Now().Year()
-	// currentYear := strconv.Itoa(year)
-	// currentMonth := time.Now().Format("01")
-	// currentDate := time.Now().Format("02")
-	//check the user folder,
-	// folderName := fileCategory + "/" + orgId + "/" + currentYear + "-" + currentMonth + "/" + currentDate + "/" + refId
-
+	refId := token.UserId
 	folderName := fileCategory + "/" + refId
 
 	var result []interface{}
-	for _, file := range request.File {
+	for _, file := range files {
 		// fmt.Println(file)
-		fileNew := file[0]
-		fileExtn := filepath.Ext(file[0].Filename)
-		fileName := strings.TrimSuffix(file[0].Filename, fileExtn)
+		fileNew := file
+		fileExtn := filepath.Ext(fileNew.Filename)
+		fileName := strings.TrimSuffix(fileNew.Filename, fileExtn)
 		fileName = fileName + "__" + time.Now().Format("2006-01-02-15-04-05") + fileExtn
 		isErrorExist, errContent := UploadFile(fileNew, folderName+"/"+fileName)
 		if isErrorExist {
@@ -111,9 +112,10 @@ func FileUpload(c *fiber.Ctx) error {
 		//Save file name to the DB
 		id := uuid.New().String()
 		storageName := folderName + "/" + fileName
-		apiResponse := bson.M{"_id": id, "ref_id": refId, "uploaded_by": token.UserId, "folder": fileCategory, "file_name": file[0].Filename, "storage_name": storageName, "size": file[0].Size} // "extn": filepath.Ext(fileName),
+		apiResponse := bson.M{"_id": id, "ref_id": refId, "uploaded_by": token.UserId, "folder": fileCategory, "file_name": fileNew.Filename, "storage_name": storageName, "size": fileNew.Size} // "extn": filepath.Ext(fileName),
+
 		//S3
-		InsertData(c, orgId, "user_files", apiResponse) //Without Struct
+		InsertData(c, "user_files", apiResponse) //Without Struct
 		result = append(result, apiResponse)
 
 		// fmt.Printf("User Id %s, File Name:%s, Size:%d", "test", fileName, file[0].Size)
@@ -122,7 +124,7 @@ func FileUpload(c *fiber.Ctx) error {
 }
 
 // *S3
-func InsertData(c *fiber.Ctx, orgId string, collectionName string, data interface{}) error {
+func InsertData(c *fiber.Ctx, collectionName string, data interface{}) error {
 	response, err := database.GetConnection().Collection(collectionName).InsertOne(ctx, data)
 	if err != nil {
 		return BadRequest(err.Error())
@@ -171,10 +173,6 @@ func GetFileDetails(c *fiber.Ctx) error {
 }
 
 func DeleteFileIns3(c *fiber.Ctx) error {
-	orgId := c.Get("OrgId")
-	if orgId == "" {
-		return BadRequest("Organization Id missing")
-	}
 
 	s3Client, bucket := initS3()
 
@@ -208,7 +206,6 @@ func DeleteFileIns3(c *fiber.Ctx) error {
 
 			_, err := s3Client.DeleteObject(&s3.DeleteObjectInput{Bucket: aws.String(bucket), Key: aws.String(storageName)})
 			if err != nil {
-
 			}
 			// Wait until the object is deleted in S3
 			err = s3Client.WaitUntilObjectNotExists(&s3.HeadObjectInput{
@@ -221,7 +218,7 @@ func DeleteFileIns3(c *fiber.Ctx) error {
 		}
 	}
 
-	return nil
+	return SuccessResponse(c, nil)
 }
 
 func UploadbulkData(c *fiber.Ctx) error {

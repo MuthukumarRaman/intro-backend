@@ -64,7 +64,8 @@ func SetupQueryRoutes(app *fiber.App) {
 // S3 File Upload
 func SetupDownloadRoutes(app *fiber.App) {
 	r := helper.CreateRouteGroup(app, "/file", "Upload APIs")
-	r.Post("/:folder/:refId", helper.FileUpload)
+	r.Post("/:folder", helper.FileUpload)
+	r.Delete("/:collectionName/:id", helper.DeleteFileIns3)
 	r.Get("/all/:folder/:status/:page?/:limit?", helper.GetAllFileDetails)
 	r.Get("/:folder/:refId", helper.GetFileDetails)
 	// r.Delete("/:collectionName/:id",helper.DeleteFileIns3)

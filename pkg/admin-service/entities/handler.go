@@ -356,9 +356,9 @@ func DeleteById(c *fiber.Ctx) error {
 
 	filter := helper.DocIdFilter(c.Params("id"))
 
-	if collectionName == "user_files" {
-		return helper.DeleteFileIns3(c)
-	}
+	// if collectionName == "user_files" {
+	// 	return helper.DeleteFileIns3(c)
+	// }
 
 	_, err := database.GetConnection().Collection(collectionName).DeleteOne(ctx, filter)
 	if err != nil {
