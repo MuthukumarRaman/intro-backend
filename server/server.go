@@ -29,7 +29,7 @@ func setupMiddlewares(app *fiber.App) {
 
 	//extend your config for customization
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
+		// AllowOrigins:     "*",
 		AllowHeaders:     "OrgId, Origin, Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization,X-Requested-With",
 		AllowMethods:     "POST,GET,PUT,OPTIONS,DELETE",
 		ExposeHeaders:    "Origin",

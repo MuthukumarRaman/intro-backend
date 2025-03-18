@@ -14,6 +14,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var openAiKey = "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"
+var openAiOrgId = "org-CmUrsek5G1rJm0RYVMX6om1B"
+
 // AIProfile represents an individual profile configuration
 type AIProfile struct {
 	ModelID        string       `json:"modelId"`
@@ -624,7 +627,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				ForcedFunction: "parseToOnboardingModel",
 			},
 			"userProfile": {
-				ModelID:        "gpt-4o", //gpt-3.5-turbo
+				ModelID:        "gpt-3.5-turbo", //gpt-3.5-turbo
 				TaskDefinition: "Return a user profile as natural language using a JSON structure.",
 				AIFunctions: []AIFunction{
 					{
@@ -908,7 +911,7 @@ func GetUserProfile2(c *fiber.Ctx) error {
 		newData = false
 	}
 
-	client := openai.NewClient("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")
+	client := openai.NewClient(openAiKey)
 	var strcut = OpenAIDescriptors{}
 	var aiQuery string
 
@@ -1023,7 +1026,7 @@ func MatchUserProfile(c *fiber.Ctx) error {
 		primaryUser, OtherUsers,
 	)
 
-	client := openai.NewClient("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")
+	client := openai.NewClient(openAiKey)
 	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_profile", &strcut)
 	if err != nil {
 		return helper.InternalServerError(err.Error())
@@ -1051,7 +1054,7 @@ func GetUserProfile(c *fiber.Ctx) error {
 		newData = true
 	}
 
-	client := openai.NewClient("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")
+	client := openai.NewClient(openAiKey)
 
 	var descriptor OpenAIDescriptors
 	aiQuery := buildAIQuery(newData, &descriptor, newProfileData, profileID)
@@ -1351,8 +1354,8 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 		userData, results,
 	)
 
-	config := openai.DefaultConfig("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")
-	config.OrgID = "org-CmUrsek5G1rJm0RYVMX6om1B"
+	config := openai.DefaultConfig(openAiKey)
+	config.OrgID = openAiOrgId
 
 	// var res map[string]interface{}
 	client := openai.NewClientWithConfig(config)
@@ -1696,8 +1699,8 @@ func MatchAllUserProfile(c *fiber.Ctx) error {
 		userData, results,
 	)
 
-	config := openai.DefaultConfig("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")
-	config.OrgID = "org-CmUrsek5G1rJm0RYVMX6om1B"
+	config := openai.DefaultConfig(openAiKey)
+	config.OrgID = openAiOrgId
 
 	client := openai.NewClientWithConfig(config)
 
@@ -1787,7 +1790,7 @@ func UpdateProfileById(c *fiber.Ctx) error {
 		newData = true
 	}
 
-	client := openai.NewClient("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")
+	client := openai.NewClient(openAiKey)
 
 	var descriptor OpenAIDescriptors
 	aiQuery := buildAIQuery(newData, &descriptor, newProfileData, profileID)
@@ -1854,8 +1857,8 @@ func GetUserOnboardingController(c *fiber.Ctx) error {
 		)
 	}
 
-	config := openai.DefaultConfig("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")
-	config.OrgID = "org-CmUrsek5G1rJm0RYVMX6om1B"
+	config := openai.DefaultConfig(openAiKey)
+	config.OrgID = openAiOrgId
 
 	client := openai.NewClientWithConfig(config)
 
