@@ -627,7 +627,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				ForcedFunction: "parseToOnboardingModel",
 			},
 			"userProfile": {
-				ModelID:        "gpt-3.5-turbo", //gpt-3.5-turbo
+				ModelID:        "gpt-4o", //gpt-3.5-turbo
 				TaskDefinition: "Return a user profile as natural language using a JSON structure.",
 				AIFunctions: []AIFunction{
 					{
@@ -639,7 +639,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				ForcedFunction: "parseToUserProfileModel",
 			},
 			"match_profile": {
-				ModelID:        "gpt-3.5-turbo", //gpt-4o
+				ModelID:        "gpt-4o", //gpt-4o
 				TaskDefinition: "Return only the matched users by strictly comparing their interests  using a structured JSON format. DO NOT RETURN USERS WHO DO NOT MATCH.",
 				AIFunctions: []AIFunction{
 					{
