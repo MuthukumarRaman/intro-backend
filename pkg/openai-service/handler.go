@@ -650,6 +650,18 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				},
 				ForcedFunction: "matchUserProfileModel",
 			},
+			"match_reason": {
+				ModelID:        "gpt-4o", //gpt-4o
+				TaskDefinition: "The match_reason must be exactly three lines long, providing a clear explanation of why the match was made.",
+				AIFunctions: []AIFunction{
+					{
+						Name:        "matchProfileReasonModel",
+						Description: "The match_reason must be exactly three lines long, providing a clear explanation of why the match was made.",
+						Parameters:  descriptors.OpenAIDescriptorsConfig().Properties["match_profile"],
+					},
+				},
+				ForcedFunction: "matchProfileReasonModel",
+			},
 		},
 	}
 }
@@ -707,7 +719,25 @@ func GenerateFromAI(client *openai.Client, aiQuery string, targetConfig string, 
 	}
 	return result, nil
 }
+func GenerateEmbeddingFromAI(client *openai.Client, text string) ([]float32, error) {
+	// Prepare the OpenAI Embedding request
+	ctx := context.Background()
+	resp, err := client.CreateEmbeddings(ctx, openai.EmbeddingRequest{
+		Model: openai.AdaEmbeddingV2,
+		Input: []string{text},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get embedding: %v", err)
+	}
 
+	// Extract embedding vector
+	if len(resp.Data) > 0 {
+
+		return resp.Data[0].Embedding, nil
+	}
+
+	return nil, fmt.Errorf("no embedding returned")
+}
 func ProfileMatchFromAI(client *openai.Client, aiQuery string, targetConfig string, descriptors *OpenAIDescriptors) ([]string, error) {
 	// log.Println("[OPENAI] Calling OpenAI service")
 
@@ -855,10 +885,13 @@ func ProfileMatchFromOpenAI(client *openai.Client, aiQuery string, targetConfig 
 
 	ctx := context.Background()
 	// Perform the OpenAI API call
+	fmt.Println("ai called......")
 	resp, err := client.CreateChatCompletion(ctx, req)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("ai responsed.....")
 
 	// Extract and return user IDs with matching skills, hobbies, and expertise
 
@@ -1081,6 +1114,27 @@ func GetUserProfile(c *fiber.Ctx) error {
 
 	if res == nil {
 		return helper.InternalServerError("Open AI not responding")
+	} else {
+		var expertise string
+		var hobbies string
+		if res["expertise"] != nil {
+			expertise = res["expertise"].(string)
+		}
+		if res["hobbies"] != nil {
+			hobbies = res["hobbies"].(string)
+		}
+		newEmbeddedData := expertise + hobbies
+		embeddedData, err := GenerateEmbeddingFromAI(client, newEmbeddedData)
+		if err != nil {
+			return helper.InternalServerError(err.Error())
+		}
+
+		// filter := bson.M{"_id": profileID}
+		// update := bson.M{"$set": bson.M{"embedded": embeddedData, "_id": profileID}}
+		// database.GetConnection().Collection("embedded_users").InsertOne(context.Background(), bson.M{"embedded": embeddedData, "_id": profileID})
+		// database.GetConnection().Collection("user").UpdateOne(context.Background(), filter, update)
+		fmt.Println(embeddedData)
+		res["embedded"] = embeddedData
 	}
 
 	DataUpdateById(res, profileID)
@@ -1132,7 +1186,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	var geoLocation primitive.A
 	// UserId := c.Params("userId")
 	userToken := helper.GetUserTokenValue(c)
-	fmt.Println(userToken)
+	// fmt.Println(userToken)
 	userData, err := fetchUserProfile(userToken.UserId)
 	if err != nil {
 
@@ -1141,14 +1195,14 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 
 	distance := helper.ToInt(c.Params("dis"))
 	if distance == 0 {
-		distance = 50000
+		distance = 5000
 	}
 
-	var data map[string]interface{}
-	err = c.BodyParser(&data)
-	if err != nil {
-		return helper.BadRequest(err.Error())
-	}
+	// var data map[string]interface{}
+	// err = c.BodyParser(&data)
+	// if err != nil {
+	// 	return helper.BadRequest(err.Error())
+	// }
 
 	// distance := helper.ToInt(data["distance"])
 	if userData["geo_location"] != nil {
@@ -1156,7 +1210,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	} else {
 		return helper.Unexpected("Update Location")
 	}
-
+	// fmt.Println(userToken.UserId)
 	pipeline := bson.A{
 		bson.D{
 			{"$geoNear",
@@ -1183,6 +1237,24 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 					{"localField", "_id"},
 					{"foreignField", "user_ids"},
 					{"as", "result"},
+				},
+			},
+		},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "user"},
+					{"localField", "from_user"},
+					{"foreignField", "_id"},
+					{"as", "from_user_result"},
+				},
+			},
+		},
+		bson.D{
+			{"$unwind",
+				bson.D{
+					{"path", "$from_user_result"},
+					{"preserveNullAndEmptyArrays", true},
 				},
 			},
 		},
@@ -1292,24 +1364,10 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 							},
 						},
 					},
+					{"from_user_embedded", "$from_user_result.embedded"},
 				},
 			},
 		},
-		// bson.D{
-		// 	{"$match",
-		// 		bson.D{
-		// 			{"result.user_ids",
-		// 				bson.D{
-		// 					{"$nin",
-		// 						bson.A{
-		// 							userToken.UserId,
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
 		bson.D{
 			{"$match",
 				bson.D{
@@ -1325,33 +1383,130 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 				},
 			},
 		},
+		bson.D{
+			{"$group",
+				bson.D{
+					{"_id", primitive.Null{}},
+					{"id", bson.D{{"$push", "$_id"}}},
+					{"embedded", bson.D{{"$first", "$from_user_embedded"}}},
+					{"userData",
+						bson.D{
+							{"$push",
+								bson.D{
+									{"user_id", "$_id"},
+									{"string", "$string"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
-	results, err := helper.GetAggregateQueryResult("user", pipeline)
-
-	// if err != nil {
-	// 	return helper.BadRequest(err.Error())
-	// }
-
+	var vectorResult []bson.M
+	results, _ := helper.GetAggregateQueryResult("user", pipeline)
 	if len(results) == 0 {
 		var Userresults []bson.M
 		Userresults = append(Userresults, userData)
 		return helper.SuccessResponse(c, Userresults)
 	}
+	userIdsResults := results[0]
 
-	fmt.Println(results, "   ", len(results))
+	if userIdsResults != nil {
+		// fmt.Println(userIdsResults)
+		userIds := userIdsResults["id"].(primitive.A)
+		fromUserEmbeddedData := userIdsResults["embedded"].(primitive.A)
+		userDataDis := userIdsResults["userData"].(primitive.A)
+		vectorPipeline := bson.A{
+			bson.D{
+				{"$vectorSearch",
+					bson.D{
+						{"index", "vector"},
+						{"path", "embedded"},
+						{"queryVector",
+							fromUserEmbeddedData,
+						},
+						{"numCandidates", 100},
+						{"limit", 15},
+						{"similarity", "cosine"},
+					},
+				},
+			},
+			bson.D{{"$match", bson.D{{"_id", bson.D{{"$in", userIds}}}}}},
+
+			bson.D{
+				{"$set",
+					bson.D{
+						{"score", bson.D{{"$meta", "vectorSearchScore"}}},
+
+						{"string",
+							bson.D{
+								{"$let",
+									bson.D{
+										{"vars",
+											bson.D{
+												{"matched",
+													bson.D{
+														{"$first",
+															bson.D{
+																{"$filter",
+																	bson.D{
+																		{"input", userDataDis},
+																		{"as", "item"},
+																		{"cond",
+																			bson.D{
+																				{"$eq",
+																					bson.A{
+																						"$$item.user_id",
+																						bson.D{{"$toString", "$_id"}},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+										{"in", "$$matched.string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		// fmt.Println(vectorPipeline)
+		vectorResult, _ = helper.GetAggregateQueryResult("user", vectorPipeline)
+
+	}
+	fmt.Println(len(vectorResult))
+	if len(vectorResult) == 0 {
+		var Userresults []bson.M
+		Userresults = append(vectorResult, userData)
+		return helper.SuccessResponse(c, Userresults)
+	} else {
+		vectorResult = append(vectorResult, userData)
+	}
+
+	return helper.SuccessResponse(c, vectorResult)
+	// fmt.Println(results, "   ", len(results))
 	var strcut = OpenAIDescriptors{}
+
 	aiQuery := fmt.Sprintf(
-		"You are a strict filtering engine. Your task is to find and return ONLY the users from the following list whose attributes have meaningful similarities with the primary user. "+
-			"Compare the following attributes: key_skills, expertise, experience, industry, education, and other relevant fields. "+
-			"Return users who share AT LEAST ONE strong commonality in any of these attributes. "+
-			"DO NOT return users with fewer than ONE strong common attribute. "+
-			"If no users match this condition, return an empty array. "+
+		"You are an assistant that compares users. Return users from 'otherUsers' who have at least one matching attribute with the 'primaryUser'. "+
+			"For each matched user, return a match_type and a match_reason. "+
+			"The match_reason must be exactly three lines long, providing a clear explanation of why the match was made."+
 			"STRICTLY FOLLOW THIS RULE.\n\n"+
 			"Primary user profile:\n%v\n\n"+
 			"List of other users to check for matches:\n%v\n\n"+
 			"Output format (no extra text): ",
-		userData, results,
+		userData, vectorResult,
 	)
 
 	config := openai.DefaultConfig(openAiKey)
@@ -1359,7 +1514,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 
 	// var res map[string]interface{}
 	client := openai.NewClientWithConfig(config)
-	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_profile", &strcut)
+	res, err := ProfileMatchFromOpenAI(client, aiQuery, "match_reason", &strcut)
 
 	if err != nil {
 		// return nil
@@ -1382,19 +1537,19 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 
 	matchedUserData := res["matched_users"].([]interface{})
 
-	var Userresults []bson.M
+	// var Userresults []bson.M
 	seen := make(map[interface{}]bool) // Track unique _id values
 
 	// Iterate over user IDs and filter results
 	for _, users := range matchedUserData {
 		userMap := users.(map[string]interface{})
-		for _, user := range results {
+		for _, user := range vectorResult {
 			userId := userMap["user_id"].(string)
 			if user["_id"] == userId {
 				if !seen[userId] { // Check if already added
 					user["match_reason"] = userMap["match_reason"].(string)
 					user["match_type"] = userMap["match_type"].(string)
-					Userresults = append(Userresults, user)
+					vectorResult = append(vectorResult, user)
 					seen[userId] = true
 				}
 			}
@@ -1404,12 +1559,12 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	// Add userData if it's not already in Userresults
 	if userID, exists := userData["_id"]; exists {
 		if !seen[userID] { // Check if userData is unique
-			Userresults = append(Userresults, userData)
+			vectorResult = append(vectorResult, userData)
 			seen[userID] = true
 		}
 	}
 
-	return helper.SuccessResponse(c, Userresults)
+	return helper.SuccessResponse(c, vectorResult)
 }
 
 func MatchAllUserProfile(c *fiber.Ctx) error {
