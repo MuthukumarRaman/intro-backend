@@ -174,7 +174,7 @@ func GetFileDetails(c *fiber.Ctx) error {
 
 func DeleteFileIns3(c *fiber.Ctx) error {
 
-	s3Client, bucket := initS3()
+	// s3Client, bucket := initS3()
 
 	ID := c.Params("id")
 	collectionName := c.Params("collectionName")
@@ -202,19 +202,22 @@ func DeleteFileIns3(c *fiber.Ctx) error {
 
 	for _, obj := range res {
 		storageName, found := obj["storage_name"].(string)
+		// if found {
+
+		// 	_, err := s3Client.DeleteObject(&s3.DeleteObjectInput{Bucket: aws.String(bucket), Key: aws.String(storageName)})
+		// 	if err != nil {
+		// 	}
+		// 	// Wait until the object is deleted in S3
+		// 	err = s3Client.WaitUntilObjectNotExists(&s3.HeadObjectInput{
+		// 		Bucket: aws.String(bucket),
+		// 		Key:    aws.String(storageName),
+		// 	})
+
+		// 	if err != nil {
+		// 	}
+		// }
 		if found {
-
-			_, err := s3Client.DeleteObject(&s3.DeleteObjectInput{Bucket: aws.String(bucket), Key: aws.String(storageName)})
-			if err != nil {
-			}
-			// Wait until the object is deleted in S3
-			err = s3Client.WaitUntilObjectNotExists(&s3.HeadObjectInput{
-				Bucket: aws.String(bucket),
-				Key:    aws.String(storageName),
-			})
-
-			if err != nil {
-			}
+			DeleteFileFromGCS(storageName)
 		}
 	}
 

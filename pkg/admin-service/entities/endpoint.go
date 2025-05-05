@@ -39,6 +39,7 @@ func SetupCRUDRoutes(app *fiber.App) {
 	r.Delete("/:collectionName/:id", DeleteById)
 	r.Delete("/:collectionName", DeleteByAll)
 	r.Post("/filter/:collectionName", getDocsHandler)
+
 }
 
 // func SetTesting
@@ -101,6 +102,7 @@ func SetupFCMRoutes(app *fiber.App) {
 }
 
 func SetupFileUpload(app *fiber.App) {
-	r := helper.CreateRouteGroup(app, "/upload", "Data Sets")
-	r.Post("/file", UploadFiles)
+	r := helper.CreateRouteGroup(app, "/gfile_upload", "Data Sets")
+	r.Post("/file", helper.FileUploadToGoogle)
+	r.Get("/get-signed-url", helper.GetSignedURL)
 }

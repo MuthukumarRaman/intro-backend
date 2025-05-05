@@ -214,6 +214,10 @@ func (d *OpenAIDescriptors) OpenAIDescriptorsConfig() Property {
 						Type:        "string",
 						Description: "Mention your hobbies and activities outside of work.",
 					},
+					"embedding_keywords": {
+						Type:        "string",
+						Description: "In this extract the important keys in this profile and stored it in this field",
+					},
 				},
 			},
 			"match_profile": {
@@ -639,7 +643,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				ForcedFunction: "parseToUserProfileModel",
 			},
 			"match_profile": {
-				ModelID:        "gpt-4o", //gpt-4o
+				ModelID:        "gpt-3.5-turbo", //gpt-4o
 				TaskDefinition: "Return only the matched users by strictly comparing their interests  using a structured JSON format. DO NOT RETURN USERS WHO DO NOT MATCH.",
 				AIFunctions: []AIFunction{
 					{
@@ -651,7 +655,7 @@ func NewAIConfigModel(descriptors *OpenAIDescriptors) AIConfigModel {
 				ForcedFunction: "matchUserProfileModel",
 			},
 			"match_reason": {
-				ModelID:        "gpt-4o", //gpt-4o
+				ModelID:        "gpt-3.5-turbo", //gpt-4o
 				TaskDefinition: "The match_reason must be exactly three lines long, providing a clear explanation of why the match was made.",
 				AIFunctions: []AIFunction{
 					{
@@ -1115,26 +1119,19 @@ func GetUserProfile(c *fiber.Ctx) error {
 	if res == nil {
 		return helper.InternalServerError("Open AI not responding")
 	} else {
-		var expertise string
-		var hobbies string
-		if res["expertise"] != nil {
-			expertise = res["expertise"].(string)
-		}
-		if res["hobbies"] != nil {
-			hobbies = res["hobbies"].(string)
-		}
-		newEmbeddedData := expertise + hobbies
-		embeddedData, err := GenerateEmbeddingFromAI(client, newEmbeddedData)
-		if err != nil {
-			return helper.InternalServerError(err.Error())
+		var embeddingKeywords string
+		fmt.Println(res)
+		if res["embedding_keywords"] != nil {
+			embeddingKeywords = res["embedding_keywords"].(string)
+			embeddedData, err := GenerateEmbeddingFromAI(client, embeddingKeywords)
+			if err != nil {
+				return helper.InternalServerError(err.Error())
+			}
+
+			fmt.Println(embeddedData)
+			res["embedded"] = embeddedData
 		}
 
-		// filter := bson.M{"_id": profileID}
-		// update := bson.M{"$set": bson.M{"embedded": embeddedData, "_id": profileID}}
-		// database.GetConnection().Collection("embedded_users").InsertOne(context.Background(), bson.M{"embedded": embeddedData, "_id": profileID})
-		// database.GetConnection().Collection("user").UpdateOne(context.Background(), filter, update)
-		fmt.Println(embeddedData)
-		res["embedded"] = embeddedData
 	}
 
 	DataUpdateById(res, profileID)
@@ -1144,12 +1141,19 @@ func GetUserProfile(c *fiber.Ctx) error {
 
 func buildAIQuery(newData bool, descriptor *OpenAIDescriptors, newProfileData map[string]interface{}, profileID string) string {
 	if newData {
+
 		return fmt.Sprintf(
-			"Turn this user profile into a natural language description based on the following user profile model:\n%s\n"+
-				"ONLY INTERPRET THE DATA IN THE USER PROFILE DATA PROVIDED. DO NOT MAKE UP ANYTHING ELSE.\n"+
-				"The new information to add to the user profile is:\n%s\n",
-			descriptor.OpenAIDescriptorsConfig().Properties["userProfile"], newProfileData,
+			"Turn this user profile into a natural language description based on the following user profile model:\n%s\n\n"+
+				"ONLY INTERPRET THE DATA IN THE USER PROFILE DATA PROVIDED. DO NOT MAKE UP ANYTHING ELSE.\n\n"+
+				"The new user profile data is:\n%s\n\n"+
+				"Your task is to:\n"+
+				"1. Fill out the following descriptive fields based strictly on the user's data: `my_intro`, `bio`, `professional_journey`, `expertise`, `work_life_philosophy`, and `hobbies`.\n"+
+				"2. Extract and return a comma-separated list of important keywords from the entire profile and include it in a field called `embedding_keywords`. These keywords will be used for semantic search and must represent skills, industries, values, and professional traits found in the profile.\n\n"+
+				"Return everything as a well-formatted JSON object that includes all the fields above.",
+			descriptor.OpenAIDescriptorsConfig().Properties["userProfile"],
+			newProfileData,
 		)
+
 	}
 
 	existingProfile, err := fetchUserProfile(profileID)
@@ -1163,6 +1167,10 @@ func buildAIQuery(newData bool, descriptor *OpenAIDescriptors, newProfileData ma
 			"If geo Location Changed in New Data change geo location of old data also:\n%s\n"+
 			"The current user profile data is:\n%s\n"+
 			"The new information to add to the user profile is:\n%s\n",
+		"Your task is to:\n"+
+			"1. Fill out the following descriptive fields based strictly on the user's data: `my_intro`, `bio`, `professional_journey`, `expertise`, `work_life_philosophy`, and `hobbies`.\n"+
+			"2. Extract and return a comma-separated list of important keywords from the entire profile and include it in a field called `embedding_keywords`. These keywords will be used for semantic search and must represent skills, industries, values, and professional traits found in the profile.\n\n"+
+			"Return everything as a well-formatted JSON object that includes all the fields above.",
 		descriptor.OpenAIDescriptorsConfig().Properties["userProfile"], existingProfile, newProfileData,
 	)
 }
@@ -1184,6 +1192,7 @@ func DataUpdateById(data map[string]interface{}, updateId string) {
 
 func MatchUserProfileById(c *fiber.Ctx) error {
 	var geoLocation primitive.A
+	seen := make(map[interface{}]bool)
 	// UserId := c.Params("userId")
 	userToken := helper.GetUserTokenValue(c)
 	// fmt.Println(userToken)
@@ -1485,16 +1494,31 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 		vectorResult, _ = helper.GetAggregateQueryResult("user", vectorPipeline)
 
 	}
-	fmt.Println(len(vectorResult))
-	if len(vectorResult) == 0 {
-		var Userresults []bson.M
-		Userresults = append(vectorResult, userData)
-		return helper.SuccessResponse(c, Userresults)
-	} else {
-		vectorResult = append(vectorResult, userData)
+	// Create a map to track seen user IDs
+	// seen := make(map[interface{}]bool)
+
+	// Create a new result slice
+	var uniqueResults []bson.M
+
+	// Iterate through vectorResult to remove existing duplicates
+	for _, user := range vectorResult {
+		if userID, ok := user["_id"]; ok {
+			if !seen[userID] {
+				seen[userID] = true
+				uniqueResults = append(uniqueResults, user)
+			}
+		}
 	}
 
-	return helper.SuccessResponse(c, vectorResult)
+	// Now check userData
+	if userID, ok := userData["_id"]; ok {
+		if !seen[userID] {
+			seen[userID] = true
+			uniqueResults = append(uniqueResults, userData)
+		}
+	}
+
+	return helper.SuccessResponse(c, uniqueResults)
 	// fmt.Println(results, "   ", len(results))
 	var strcut = OpenAIDescriptors{}
 
@@ -1538,7 +1562,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	matchedUserData := res["matched_users"].([]interface{})
 
 	// var Userresults []bson.M
-	seen := make(map[interface{}]bool) // Track unique _id values
+	// Track unique _id values
 
 	// Iterate over user IDs and filter results
 	for _, users := range matchedUserData {
@@ -1840,7 +1864,7 @@ func MatchAllUserProfile(c *fiber.Ctx) error {
 		Userresults = append(Userresults, userData)
 		return helper.SuccessResponse(c, Userresults)
 	}
-
+	return helper.SuccessResponse(c, results)
 	fmt.Println(results, "   ", len(results))
 	var strcut = OpenAIDescriptors{}
 	aiQuery := fmt.Sprintf(
