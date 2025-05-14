@@ -26,7 +26,7 @@ func main() {
 
 	// By Default try to connect shared db
 	// database.Init()
-
+	helper.InitSuggestionCache()
 	// Set up authentication routes for routes that do not require a token.
 	authentication.SetupRoutes(app)
 

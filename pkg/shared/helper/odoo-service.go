@@ -17,6 +17,7 @@ type OdooConfig struct {
 	Password string
 	UID      int64
 }
+
 type OdooClient struct {
 	URL      string
 	DB       string
@@ -69,28 +70,27 @@ func NewOdooClient() (*OdooClient, error) {
 	// Authenticate
 	common, err := xmlrpc.NewClient(config.URL+"/common", nil)
 	if err != nil {
+		fmt.Println(1)
 		return nil, err
 	}
-
-	// var uid int
-	// err = common.Call("authenticate", []interface{}{config.DB, config.Username, config.Password, map[string]interface{}{}}, &uid)
-	// if err != nil || uid == 0 {
-	// 	return nil, err
-	// }
 
 	var result interface{}
 	err = common.Call("authenticate", []interface{}{config.DB, config.Username, config.Password, map[string]interface{}{}}, &result)
 	if err != nil {
+		fmt.Println(2)
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
+	fmt.Println(result, "ye")
 
-	uid, ok := result.(int)
-	if !ok || uid == 0 {
+	uid := ToInt(result)
+	if uid == 0 {
+		fmt.Println(3)
 		return nil, errors.New("authentication failed: invalid credentials or response type mismatch")
 	}
 
 	object, err := xmlrpc.NewClient(config.URL+"/object", nil)
 	if err != nil {
+		fmt.Println(4)
 		return nil, err
 	}
 
@@ -144,7 +144,7 @@ func AuthenticateOdoo(config *OdooConfig) error {
 
 	// /xmlrpc/2/common
 
-	finalURL := fmt.Sprintf("%s/common", "https://kriyatec.odoo.com/xmlrpc/2")
+	finalURL := fmt.Sprintf("%s/common", "https://introme.odoo.com/xmlrpc/2")
 	fmt.Println("Connecting to:", finalURL)
 
 	client, err := xmlrpc.NewClient(finalURL, nil)
@@ -157,6 +157,7 @@ func AuthenticateOdoo(config *OdooConfig) error {
 		fmt.Println(err.Error())
 		return err
 	}
+
 	fmt.Println(common)
 
 	var uid int64

@@ -901,27 +901,25 @@ func ParnterCreateAndAddSubscriptions(c *fiber.Ctx) error {
 
 	client, err := helper.NewOdooClient()
 	if err != nil {
-		fmt.Println("yess")
 		return helper.Unexpected(err.Error())
 	}
 
-	models, err := client.ListModels()
-	if err != nil {
-		fmt.Println("Noo")
-		return helper.Unexpected(err.Error())
-	}
-
-	return helper.SuccessResponse(c, models)
-	// templates, err := client.GetSubscriptionTemplates()
+	// models, err := client.ListModels()
 	// if err != nil {
-	// 	fmt.Printf("Error fetching subscription templates: %v\n", err)
 	// 	return helper.Unexpected(err.Error())
 	// }
 
-	// for _, template := range templates {
-	// 	fmt.Printf("Template ID: %v, Name: %v\n", template["id"], template["name"])
-	// }
-	// return helper.SuccessResponse(c, templates)
+	// return helper.SuccessResponse(c, models)
+	templates, err := client.GetSubscriptionTemplates()
+	if err != nil {
+		fmt.Printf("Error fetching subscription templates: %v\n", err)
+		return helper.Unexpected(err.Error())
+	}
+
+	for _, template := range templates {
+		fmt.Printf("Template ID: %v, Name: %v\n", template["id"], template["name"])
+	}
+	return helper.SuccessResponse(c, templates)
 
 	userName := inputData["first_name"].(string)
 	email := inputData["email_id"].(string)

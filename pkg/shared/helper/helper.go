@@ -754,3 +754,13 @@ func UpdateDataset(c *fiber.Ctx) error {
 
 	return SuccessResponse(c, Response)
 }
+
+func ConvertPrimitiveAToStringSlice(arr primitive.A) []string {
+	var result []string
+	for _, v := range arr {
+		if str, ok := v.(string); ok {
+			result = append(result, str)
+		}
+	}
+	return result
+}
