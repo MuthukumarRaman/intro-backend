@@ -27,6 +27,7 @@ type LoginResponse struct {
 	UserProfile interface{} `json:"profile" bson:"profile"`
 	Token       string      `json:"token"`
 	Status      int         `json:"status" bson:"status"`
+	Points      float64     `json:"points" bson:"points"`
 }
 
 // ResetPasswordRequestDto - Dto for reset password Request
@@ -83,4 +84,22 @@ type SSOUser struct {
 	Status        string    `json:"status" bson:"status"`
 	CreatedOn     time.Time `json:"created_on" bson:"created_on"`
 	Role          string    `json:"role" bson:"role"`
+}
+
+type Wallet struct {
+	ID                string    `json:"_id" bson:"_id"`
+	User_ID           string    `json:"user_id" bson:"user_id"`
+	Available_Credits float64   `json:"available_credits" bson:"available_credits"`
+	Status            string    `json:"status" bson:"status"`
+	CreatedON         time.Time `json:"created_on" bson:"created_on"`
+	UpdatedON         time.Time `json:"updated_on" bson:"updated_on"`
+}
+type Transaction struct {
+	ID                string    `json:"_id" bson:"_id"`
+	WalletId          string    `json:"wallet_id" bson:"wallet_id"`
+	Type              string    `json:"type" bson:"type"`
+	OpenAmount        float64   `json:"open_amount" bson:"open_amount"`
+	TransactionAmount float64   `json:"transaction_amount" bson:"transaction_amount"`
+	AvailableAmount   float64   `json:"available_amount" bson:"available_amount"`
+	TransactionTime   time.Time `json:"transaction_datetime" bson:"transaction_datetime"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"introme-api/pkg/shared/database"
 	"introme-api/pkg/shared/helper"
@@ -1192,6 +1193,7 @@ func DataUpdateById(data map[string]interface{}, updateId string) {
 }
 
 func MatchUserProfileById(c *fiber.Ctx) error {
+	start := time.Now()
 	var geoLocation primitive.A
 	seen := make(map[interface{}]bool)
 	// UserId := c.Params("userId")
@@ -1224,398 +1226,153 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	getUserIds, usersFound := helper.GetSuggestion(userToken.UserId)
 
 	fmt.Println(getUserIds, "userIds")
+	commonStages := bson.A{
+		bson.D{
+			{"$geoNear",
+				bson.D{
+					{"near", bson.D{{"type", "Point"}, {"coordinates", geoLocation}}},
+					{"distanceField", "string"},
+					{"maxDistance", distance},
+					{"spherical", true},
+				},
+			},
+		},
+		bson.D{{"$set", bson.D{{"from_user", userToken.UserId}}}}, // Added missing comma here
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "user_matched"},
+					{"localField", "_id"},
+					{"foreignField", "user_ids"},
+					{"as", "result"},
+				},
+			},
+		},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "user"},
+					{"localField", "from_user"},
+					{"foreignField", "_id"},
+					{"as", "from_user_result"},
+				},
+			},
+		},
+		bson.D{
+			{"$unwind",
+				bson.D{
+					{"path", "$from_user_result"},
+					{"preserveNullAndEmptyArrays", true},
+				},
+			},
+		},
+		bson.D{
+			{"$addFields",
+				bson.D{
+					{"userIDS",
+						bson.D{
+							{"$reduce",
+								bson.D{
+									{"input", "$result"},
+									{"initialValue", bson.A{}},
+									{"in",
+										bson.D{{"$concatArrays", bson.A{"$$value", "$$this.user_ids"}}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		bson.D{
+			{"$lookup",
+				bson.D{
+					{"from", "notifications"},
+					{"let", bson.D{{"from_user", "$from_user"}, {"to_user", "$_id"}}},
+					{"pipeline",
+						bson.A{
+							bson.D{
+								{"$match",
+									bson.D{
+										{"$expr",
+											bson.D{
+												{"$and",
+													bson.A{
+														bson.D{{"$eq", bson.A{"$$from_user", "$from"}}},
+														bson.D{{"$eq", bson.A{"$$to_user", "$to"}}},
+														bson.D{{"$eq", bson.A{"pending", "$req_status"}}},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{"as", "result"},
+				},
+			},
+		},
+		bson.D{
+			{"$set",
+				bson.D{
+					{"request_sent",
+						bson.D{{"$gt", bson.A{bson.D{{"$size", bson.D{{"$ifNull", bson.A{"$result", bson.A{}}}}}}, 0}}},
+					},
+					{"from_user_embedded", "$from_user_result.embedded"},
+				},
+			},
+		},
+	}
 
 	var pipeline bson.A
+	pipeline = append(commonStages)
 	if usersFound {
-		pipeline = bson.A{
-			bson.D{
-				{"$geoNear",
-					bson.D{
-						{"near",
-							bson.D{
-								{"type", "Point"},
-								{"coordinates",
-									geoLocation,
-								},
-							},
-						},
-						{"distanceField", "string"},
-						{"maxDistance", distance},
-						{"spherical", true},
+		pipeline = append(pipeline, bson.D{
+			{"$match",
+				bson.D{
+					{"$and",
+						bson.A{
+							bson.D{{"userIDS", bson.D{{"$nin", bson.A{userToken.UserId}}}}},
+							bson.D{{"userIDS", bson.D{{"$nin", getUserIds}}}}},
 					},
 				},
 			},
-			bson.D{{"$set", bson.D{{"from_user", userToken.UserId}}}},
-			bson.D{
-				{"$lookup",
-					bson.D{
-						{"from", "user_matched"},
-						{"localField", "_id"},
-						{"foreignField", "user_ids"},
-						{"as", "result"},
-					},
-				},
-			},
-			bson.D{
-				{"$lookup",
-					bson.D{
-						{"from", "user"},
-						{"localField", "from_user"},
-						{"foreignField", "_id"},
-						{"as", "from_user_result"},
-					},
-				},
-			},
-			bson.D{
-				{"$unwind",
-					bson.D{
-						{"path", "$from_user_result"},
-						{"preserveNullAndEmptyArrays", true},
-					},
-				},
-			},
-			bson.D{
-				{"$addFields",
-					bson.D{
-						{"userIDS",
-							bson.D{
-								{"$reduce",
-									bson.D{
-										{"input", "$result"},
-										{"initialValue", bson.A{}},
-										{"in",
-											bson.D{
-												{"$concatArrays",
-													bson.A{
-														"$$value",
-														"$$this.user_ids",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			bson.D{
-				{"$lookup",
-					bson.D{
-						{"from", "notifications"},
-						{"let",
-							bson.D{
-								{"from_user", "$from_user"},
-								{"to_user", "$_id"},
-							},
-						},
-						{"pipeline",
-							bson.A{
-								bson.D{
-									{"$match",
-										bson.D{
-											{"$expr",
-												bson.D{
-													{"$and",
-														bson.A{
-															bson.D{
-																{"$eq",
-																	bson.A{
-																		"$$from_user",
-																		"$from",
-																	},
-																},
-															},
-															bson.D{
-																{"$eq",
-																	bson.A{
-																		"$$to_user",
-																		"$to",
-																	},
-																},
-															},
-															bson.D{
-																{"$eq",
-																	bson.A{
-																		"pending",
-																		"$req_status",
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						{"as", "result"},
-					},
-				},
-			},
-			bson.D{
-				{"$set",
-					bson.D{
-						{"request_sent",
-							bson.D{
-								{"$gt",
-									bson.A{
-										bson.D{
-											{"$size",
-												bson.D{
-													{"$ifNull",
-														bson.A{
-															"$result",
-															bson.A{},
-														},
-													},
-												},
-											},
-										},
-										0,
-									},
-								},
-							},
-						},
-						{"from_user_embedded", "$from_user_result.embedded"},
-					},
-				},
-			},
-			bson.D{
-				{"$match", bson.D{
-					{"$and", bson.A{
-						bson.D{
-							{"userIDS", bson.D{
-								{"$nin", bson.A{userToken.UserId}},
-							}},
-						},
-						bson.D{
-							{"userIDS", bson.D{
-								{"$nin", getUserIds},
-							}},
-						},
-					}},
-				}},
-			},
-
-			bson.D{
-				{"$group",
-					bson.D{
-						{"_id", primitive.Null{}},
-						{"id", bson.D{{"$push", "$_id"}}},
-						{"embedded", bson.D{{"$first", "$from_user_embedded"}}},
-						{"userData",
-							bson.D{
-								{"$push",
-									bson.D{
-										{"user_id", "$_id"},
-										{"string", "$string"},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
+		},
+		)
 	} else {
-		pipeline = bson.A{
-			bson.D{
-				{"$geoNear",
-					bson.D{
-						{"near",
-							bson.D{
-								{"type", "Point"},
-								{"coordinates",
-									geoLocation,
-								},
-							},
-						},
-						{"distanceField", "string"},
-						{"maxDistance", distance},
-						{"spherical", true},
-					},
-				},
-			},
-			bson.D{{"$set", bson.D{{"from_user", userToken.UserId}}}},
-			bson.D{
-				{"$lookup",
-					bson.D{
-						{"from", "user_matched"},
-						{"localField", "_id"},
-						{"foreignField", "user_ids"},
-						{"as", "result"},
-					},
-				},
-			},
-			bson.D{
-				{"$lookup",
-					bson.D{
-						{"from", "user"},
-						{"localField", "from_user"},
-						{"foreignField", "_id"},
-						{"as", "from_user_result"},
-					},
-				},
-			},
-			bson.D{
-				{"$unwind",
-					bson.D{
-						{"path", "$from_user_result"},
-						{"preserveNullAndEmptyArrays", true},
-					},
-				},
-			},
-			bson.D{
-				{"$addFields",
-					bson.D{
-						{"userIDS",
-							bson.D{
-								{"$reduce",
-									bson.D{
-										{"input", "$result"},
-										{"initialValue", bson.A{}},
-										{"in",
-											bson.D{
-												{"$concatArrays",
-													bson.A{
-														"$$value",
-														"$$this.user_ids",
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			bson.D{
-				{"$lookup",
-					bson.D{
-						{"from", "notifications"},
-						{"let",
-							bson.D{
-								{"from_user", "$from_user"},
-								{"to_user", "$_id"},
-							},
-						},
-						{"pipeline",
-							bson.A{
-								bson.D{
-									{"$match",
-										bson.D{
-											{"$expr",
-												bson.D{
-													{"$and",
-														bson.A{
-															bson.D{
-																{"$eq",
-																	bson.A{
-																		"$$from_user",
-																		"$from",
-																	},
-																},
-															},
-															bson.D{
-																{"$eq",
-																	bson.A{
-																		"$$to_user",
-																		"$to",
-																	},
-																},
-															},
-															bson.D{
-																{"$eq",
-																	bson.A{
-																		"pending",
-																		"$req_status",
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						{"as", "result"},
-					},
-				},
-			},
-			bson.D{
-				{"$set",
-					bson.D{
-						{"request_sent",
-							bson.D{
-								{"$gt",
-									bson.A{
-										bson.D{
-											{"$size",
-												bson.D{
-													{"$ifNull",
-														bson.A{
-															"$result",
-															bson.A{},
-														},
-													},
-												},
-											},
-										},
-										0,
-									},
-								},
-							},
-						},
-						{"from_user_embedded", "$from_user_result.embedded"},
-					},
-				},
-			},
+		pipeline = append(pipeline,
 			bson.D{
 				{"$match",
-					bson.D{
-						{"userIDS",
-							bson.D{
-								{"$nin",
-									bson.A{
-										userToken.UserId,
-									},
-								},
-							},
-						},
-					},
+					bson.D{{"userIDS", bson.D{{"$nin", bson.A{userToken.UserId}}}}},
 				},
 			},
-
-			bson.D{
-				{"$group",
-					bson.D{
-						{"_id", primitive.Null{}},
-						{"id", bson.D{{"$push", "$_id"}}},
-						{"embedded", bson.D{{"$first", "$from_user_embedded"}}},
-						{"userData",
-							bson.D{
-								{"$push",
-									bson.D{
-										{"user_id", "$_id"},
-										{"string", "$string"},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
+		)
 	}
+
+	pipeline = append(pipeline,
+		bson.D{
+			{"$group",
+				bson.D{
+					{"_id", primitive.Null{}},
+					{"id", bson.D{{"$push", "$_id"}}},
+					{"embedded", bson.D{{"$first", "$from_user_embedded"}}},
+					{"userData",
+						bson.D{
+							{"$push",
+								bson.D{
+									{"user_id", "$_id"},
+									{"string", "$string"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	)
 
 	// fmt.Println(userToken.UserId)
 
@@ -1813,7 +1570,8 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 			uniqueResults = append(uniqueResults, userData)
 		}
 	}
-
+	elapsed := time.Since(start) // Measure time elapsed
+	fmt.Printf("Execution time: %s\n", elapsed)
 	return helper.SuccessResponse(c, uniqueResults)
 	// fmt.Println(results, "   ", len(results))
 	var strcut = OpenAIDescriptors{}
@@ -1885,6 +1643,7 @@ func MatchUserProfileById(c *fiber.Ctx) error {
 	}
 
 	return helper.SuccessResponse(c, vectorResult)
+
 }
 
 func MatchAllUserProfile(c *fiber.Ctx) error {
