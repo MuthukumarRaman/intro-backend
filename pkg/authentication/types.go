@@ -27,7 +27,7 @@ type LoginResponse struct {
 	UserProfile interface{} `json:"profile" bson:"profile"`
 	Token       string      `json:"token"`
 	Status      int         `json:"status" bson:"status"`
-	Points      float64     `json:"points" bson:"points"`
+	Wallet      interface{} `json:"wallet" bson:"wallet"`
 }
 
 // ResetPasswordRequestDto - Dto for reset password Request

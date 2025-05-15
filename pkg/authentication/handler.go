@@ -502,26 +502,27 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 
 	token := helper.GenerateJWTToken(claims, 24*60) //24*60
 	// token := helper.GenerateJWTToken(claims, 1)
-	val := getPoints("USR" + id)
 
 	var response *LoginResponse
 	if userExists {
+		val := getWallet(id)
 		response = &LoginResponse{
 			Name:        userName.(string),
 			UserRole:    "user",
 			UserProfile: user,
 			Token:       token,
 			Status:      200,
-			Points:      val,
+			Wallet:      val,
 		}
 	} else {
+		val := getWallet("USR" + id)
 		response = &LoginResponse{
 			Name:        userName.(string),
 			UserRole:    "user",
 			UserProfile: req,
 			Token:       token,
 			Status:      200,
-			Points:      val,
+			Wallet:      val,
 		}
 	}
 
@@ -578,14 +579,15 @@ func transaction(wallet_id string) error {
 	return nil
 }
 
-func getPoints(user_id string) float64 {
+func getWallet(user_id string) any {
 	userFilter := bson.M{
 		"user_id": user_id,
 	}
 	var wallet Wallet
 	database.GetConnection().Collection("wallet").FindOne(ctx, userFilter).Decode(&wallet)
+	fmt.Print(wallet)
 	if wallet.ID != "" {
-		return wallet.Available_Credits
+		return wallet
 	}
-	return 0.0
+	return nil
 }
