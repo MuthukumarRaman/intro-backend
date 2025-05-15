@@ -483,6 +483,7 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 		if err != nil {
 			return helper.BadRequest(err.Error())
 		}
+		createWallet(req.Id)
 
 	}
 
@@ -501,22 +502,27 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 
 	token := helper.GenerateJWTToken(claims, 24*60) //24*60
 	// token := helper.GenerateJWTToken(claims, 1)
+
 	var response *LoginResponse
 	if userExists {
+		val := getWallet(id)
 		response = &LoginResponse{
 			Name:        userName.(string),
 			UserRole:    "user",
 			UserProfile: user,
 			Token:       token,
 			Status:      200,
+			Wallet:      val,
 		}
 	} else {
+		val := getWallet("USR" + id)
 		response = &LoginResponse{
 			Name:        userName.(string),
 			UserRole:    "user",
 			UserProfile: req,
 			Token:       token,
 			Status:      200,
+			Wallet:      val,
 		}
 	}
 
@@ -531,7 +537,57 @@ func RegisterUserWithSSO(c *fiber.Ctx) error {
 		Message:       message,
 		LoginResponse: response,
 	}
-
 	return c.JSON(responseWithMessage)
 
+}
+
+func createWallet(user_id string) error {
+	var wallet Wallet
+	var id = uuid.New().String()
+	if user_id != "" {
+		wallet.ID = id
+		wallet.User_ID = user_id
+		wallet.Available_Credits = 600
+		wallet.Status = "active"
+		wallet.CreatedON = time.Now()
+		wallet.UpdatedON = time.Now()
+
+		_, err := database.GetConnection().Collection("wallet").InsertOne(ctx, wallet)
+		if err != nil {
+			return helper.BadRequest(err.Error())
+		}
+		transaction(wallet.ID)
+	}
+	return nil
+}
+func transaction(wallet_id string) error {
+	var transaction Transaction
+	var id = uuid.New().String()
+	if wallet_id != "" {
+		transaction.ID = id
+		transaction.WalletId = wallet_id
+		transaction.OpenAmount = 0
+		transaction.Type = "CREDIT"
+		transaction.TransactionAmount = 600
+		transaction.AvailableAmount = 600
+		transaction.TransactionTime = time.Now()
+		_, err := database.GetConnection().Collection("transactions").InsertOne(ctx, transaction)
+		if err != nil {
+			return helper.BadRequest(err.Error())
+		}
+	}
+	return nil
+}
+
+func getWallet(user_id string) any {
+	userFilter := bson.M{
+		"user_id": user_id,
+	}
+	var wallet Wallet
+	database.GetConnection().Collection("wallet").FindOne(ctx, userFilter).Decode(&wallet)
+	fmt.Print(wallet)
+	if wallet.ID != "" {
+		return wallet
+	}
+	return nil
 }
