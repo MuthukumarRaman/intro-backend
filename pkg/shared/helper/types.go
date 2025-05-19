@@ -145,6 +145,20 @@ type FieldValuePair struct {
 	FieldValue interface{} `json:"fieldvalue" bson:"fieldvalue"`
 }
 
+//	type PaginationRequest struct {
+//		Start            int               `json:"start,omitempty" bson:"start,omitempty" validate:"omitempty"`
+//		End              int               `json:"end,omitempty" bson:"end,omitempty" validate:"omitempty"`
+//		CreatedBy        string            `json:"createdby,omitempty"`
+//		CreatedOn        time.Time         `json:"createdon,omitempty"`
+//		FilterColumns    []FieldValuePair  `json:"filterColumns,omitempty" bson:"filterColumns,omitempty" validate:"omitempty"`
+//		Filter           []FilterCondition `json:"filter,omitempty" bson:"filter,omitempty" validate:"omitempty"`
+//		Sort             []SortCriteria    `json:"sort,omitempty" bson:"sort,omitempty" validate:"omitempty"`
+//		Status           string            `json:"status,omitempty" bson:"status,omitempty" validate:"omitempty"`
+//		Groupname        string            `json:"group_name,omitempty" bson:"group_nam,omitempty" validate:"omitempty"`
+//		GroupDescription string            `json:"groupDescription,omitempty" bson:"groupDescription,omitempty"`
+//		GroupType        string            `json:"grouptype,omitempty" bson:"grouptype,omitempty"`
+//		FilterParams     []FilterParam     `json:"FilterParams,omitempty" bson:"FilterParams,omitempty"`
+//	}
 type PaginationRequest struct {
 	Start            int               `json:"start,omitempty" bson:"start,omitempty" validate:"omitempty"`
 	End              int               `json:"end,omitempty" bson:"end,omitempty" validate:"omitempty"`
@@ -154,12 +168,11 @@ type PaginationRequest struct {
 	Filter           []FilterCondition `json:"filter,omitempty" bson:"filter,omitempty" validate:"omitempty"`
 	Sort             []SortCriteria    `json:"sort,omitempty" bson:"sort,omitempty" validate:"omitempty"`
 	Status           string            `json:"status,omitempty" bson:"status,omitempty" validate:"omitempty"`
+	FilterParam      []FilterParam     `json:"filterParams,omitempty" bson:"filterParams,omitempty"`
 	Groupname        string            `json:"group_name,omitempty" bson:"group_nam,omitempty" validate:"omitempty"`
 	GroupDescription string            `json:"groupDescription,omitempty" bson:"groupDescription,omitempty"`
 	GroupType        string            `json:"grouptype,omitempty" bson:"grouptype,omitempty"`
-	FilterParams     []FilterParam     `json:"FilterParams,omitempty" bson:"FilterParams,omitempty"`
 }
-
 type SortCriteria struct {
 	Sort  string `json:"sort"`
 	ColID string `json:"colId"`

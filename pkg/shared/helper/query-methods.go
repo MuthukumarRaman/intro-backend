@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -294,6 +295,7 @@ func GenerateAggregationPipeline(condition ConditionGroup, basecollection string
 
 	//OpertorMap check we Sended In body to map
 	if operator, exists := operatorMap[condition.Operator]; exists {
+		// conditionValue := ConvertToDataType(value, condition.Type, valueType, pipelineBuild)
 
 		conditionValue := ConvertToDataType(value, condition.Type)
 		if condition.Operator == "INRANGE" || condition.Operator == "IN_BETWEEN" {
@@ -388,35 +390,134 @@ func PagiantionPipeline(start, end int) bson.M {
 
 // ConvertToDataType --METHOD Build the Datatype from Paramters
 func ConvertToDataType(value interface{}, DataType string) interface{} {
+	// Check the data type and perform the corresponding conversion.
 	if DataType == "time.Time" || DataType == "date" {
+		// If the data type is time.Time, attempt to parse the value as a string in RFC3339 format.
 		if valStr, ok := value.(string); ok {
 			t, err := time.Parse(time.RFC3339, valStr)
 			if err == nil {
+				// If parsing is successful, return a time.Time value with truncated seconds.
 				StartedDay := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC)
 				return StartedDay
 			}
 		}
 	} else if DataType == "string" || DataType == "text" {
-
+		// If the data type is string or text, attempt to parse the value as a string.
 		if valStr, ok := value.(string); ok {
 			t, err := time.Parse(time.RFC3339, valStr)
-			//if err is nil that time only convert the string to time.Time format
+			// If parsing as time is successful, return a time.Time value with truncated seconds.
 			if err == nil {
 				StartedDay := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC)
 				return StartedDay
 			} else {
-				// Default retrun the value string after convert string
+				// If parsing as time fails, return the original string value.
 				return valStr
 			}
 		}
 	} else if DataType == "boolean" || DataType == "bool" {
-
+		// If the data type is boolean or bool, attempt to cast the value to a boolean.
 		if boolValue, ok := value.(bool); ok {
 			return boolValue
 		}
 	}
-
+	// If the data type is not recognized or conversion is not possible, return the original value.
 	return value
+}
+func AddDurationToDate(durationStr string) (time.Time, error) {
+	now := time.Now()
+	durationStr = strings.ToLower(strings.TrimSpace(durationStr))
+
+	// Helper functions to set the start or end of the desired periods
+	startOfDay := func(t time.Time) time.Time {
+		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+	}
+	endOfDay := func(t time.Time) time.Time {
+		return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
+	}
+	startOfMonth := func(t time.Time) time.Time {
+		return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
+	}
+	endOfMonth := func(t time.Time) time.Time {
+		return startOfMonth(t.AddDate(0, 1, 0)).Add(-time.Nanosecond)
+	}
+	startOfYear := func(t time.Time) time.Time {
+		return time.Date(t.Year(), time.January, 1, 0, 0, 0, 0, t.Location())
+	}
+	endOfYear := func(t time.Time) time.Time {
+		return time.Date(t.Year(), time.December, 31, 23, 59, 59, 999999999, t.Location())
+	}
+	startOfWeek := func(t time.Time) time.Time {
+		offset := (int(t.Weekday()) + 6) % 7
+		return t.AddDate(0, 0, -offset)
+	}
+	endOfWeek := func(t time.Time) time.Time {
+		return startOfWeek(t).AddDate(0, 0, 6).Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+	}
+
+	// Split the duration string
+	for _, part := range strings.Fields(durationStr) {
+		if len(part) < 2 {
+			return time.Time{}, fmt.Errorf("invalid format: %s", part)
+		}
+
+		sign := 1
+		if part[0] == '-' {
+			sign = -1
+			part = part[1:]
+		}
+
+		// Handle special time settings based on suffix
+		switch part {
+		case "ds":
+			now = startOfDay(now)
+			continue
+		case "de":
+			now = endOfDay(now)
+			continue
+		case "ms":
+			now = startOfMonth(now)
+			continue
+		case "me":
+			now = endOfMonth(now)
+			continue
+		case "ys":
+			now = startOfYear(now)
+			continue
+		case "ye":
+			now = endOfYear(now)
+			continue
+		case "ws":
+			now = startOfWeek(now)
+			continue
+		case "we":
+			now = endOfWeek(now)
+			continue
+		}
+
+		// Parse numeric duration and unit
+		numPart := part[:len(part)-1]
+		unit := part[len(part)-1:]
+
+		value, err := strconv.Atoi(numPart)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid duration value: %s", numPart)
+		}
+
+		switch unit {
+		case "d":
+			now = now.AddDate(0, 0, value*sign)
+		case "w":
+			now = now.AddDate(0, 0, value*7*sign)
+		case "m":
+			now = now.AddDate(0, value*sign, 0)
+		case "y":
+			now = now.AddDate(value*sign, 0, 0)
+		default:
+			return time.Time{}, fmt.Errorf("unsupported unit: %s", unit)
+		}
+	}
+
+	return now, nil
 }
 
 // UpdateDatasetConfig -- METHOD update the Data  to Db from filter and Data and collectionName from Param

@@ -61,10 +61,11 @@ type SelectedListItem struct {
 }
 
 type FilterParam struct {
-	ConvertToString bool   `json:"convert_To_String,omitempty" bson:"convert_To_String,omitempty"`
-	ParamsName      string `json:"parmasName,omitempty" bson:"parmasName,omitempty"`
-	ParamsDataType  string `json:"parmsDataType,omitempty" bson:"parmsDataType,omitempty"`
-	DefaultValue    string `json:"defaultValue,omitempty" bson:"defaultValue,omitempty"`
+	ConvertToString bool        `json:"convert_To_String,omitempty" bson:"convert_To_String,omitempty"`
+	ParamsName      string      `json:"parmasName,omitempty" bson:"parmasName,omitempty"`
+	ParamsDataType  string      `json:"parmsDataType,omitempty" bson:"parmsDataType,omitempty"`
+	DefaultValue    interface{} `json:"defaultValue,omitempty" bson:"defaultValue,omitempty"`
+	Paramsvalue     interface{} `json:"paramsvalue,omitempty" bson:"paramsvalue,omitempty"`
 }
 
 type DataSetConfiguration struct {
@@ -80,7 +81,7 @@ type DataSetConfiguration struct {
 	Filter                      []FilterCondition       `json:"Filter,omitempty" bson:"Filter,omitempty"`
 	DataSetBaseCollectionFilter []FilterCondition       `json:"dataSetBaseCollectionFilter,omitempty, bson:"dataSetBaseCollectionFilter,omitempty"`
 	Pipeline                    string                  `json:"pipeline,omitempty" bson:"pipeline,omitempty"`
-	Reference_pipeline           string                  `json:"reference_pipeline,omitempty" bson:"reference_pipeline,omitempty"`
+	Reference_pipeline          string                  `json:"reference_pipeline,omitempty" bson:"reference_pipeline,omitempty"`
 	Start                       int                     `json:"start,omitempty" bson:"start,omitempty"`
 	End                         int                     `json:"end,omitempty" bson:"end,omitempty"`
 }

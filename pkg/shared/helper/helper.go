@@ -624,8 +624,9 @@ func DatasetsRetrieve(c *fiber.Ctx) error {
 	// Set the global variable for append the value from filter params
 	var Dbpipelinestring string
 	// if filterparams is here that time to replace the value get he ResponseData from referencepipeline
-	if len(requestBody.FilterParams) > 0 {
-		pipelinestring := createFilterParams(requestBody.FilterParams, ResponseData["referencepipeline"].(string))
+	if len(requestBody.FilterParam) > 0 {
+		pipelinestring := createFilterParams(requestBody.FilterParam, ResponseData["referencepipeline"].(string))
+		fmt.Println(pipelinestring)
 		Dbpipelinestring = pipelinestring
 	} else {
 
@@ -676,16 +677,29 @@ func DatasetsRetrieve(c *fiber.Ctx) error {
 
 // UpdateDatatypes    --METHOD  Get the match object and to build the mongo Query
 func UpdateDatatypes(pipeline []bson.M) []bson.M {
-	output := []bson.M{}
+	output := make([]bson.M, 0, len(pipeline))
+
 	for _, stage := range pipeline {
-		if matchStage, ok := stage["$match"]; ok {
-			// To Pass the interface{} to $match data for datatype convertion
-			matchedPipeline := createQueryPipeline(matchStage)
-			// to append the  convert datatype then add inside the match if $match is not there else work it..
-			output = append(output, bson.M{"$match": matchedPipeline})
-		} else {
-			output = append(output, stage)
+		newStage := bson.M{}
+
+		for k, v := range stage {
+			if k == "$match" {
+				newStage[k] = createQueryPipeline(v)
+
+			} else if subPipeline, ok := v.([]bson.M); ok {
+				// Recursively update inner pipelines (like in $facet, $lookup)
+				newStage[k] = UpdateDatatypes(subPipeline)
+
+			} else if subMap, ok := v.(map[string]interface{}); ok {
+				// Recursively process any inner maps
+				newStage[k] = createQueryPipeline(subMap)
+
+			} else {
+				newStage[k] = v
+			}
 		}
+
+		output = append(output, newStage)
 	}
 
 	return output
@@ -698,31 +712,42 @@ Recusively call the  Method for Datatype converntiuon
 */
 
 func createQueryPipeline(data interface{}) interface{} {
-	// Check the Every DataType to incoming
-	switch dataType := data.(type) {
+	switch dataTyped := data.(type) {
+
 	case map[string][]interface{}:
 		var outputArray []interface{}
-		for _, value := range dataType {
-			for _, item := range value {
+		for _, arr := range dataTyped {
+			for _, item := range arr {
 				outputArray = append(outputArray, createQueryPipeline(item))
 			}
 		}
 		return outputArray
+
 	case map[string]interface{}:
-		valueMap := dataType
-		for k := range valueMap {
-			valueMap[k] = createQueryPipeline(valueMap[k])
+		for k, v := range dataTyped {
+			dataTyped[k] = createQueryPipeline(v)
 		}
-		return valueMap
+		return dataTyped
+
 	case []interface{}:
 		var outputArray []interface{}
-		for _, i := range dataType {
+		for _, i := range dataTyped {
 			outputArray = append(outputArray, createQueryPipeline(i))
 		}
 		return outputArray
+
 	default:
-		// if return final interface{} to ge the convert the data type to  ConvertToDataType
-		return ConvertToDataType(data, reflect.TypeOf(data).String())
+		// Convert string to time.Time if it's a valid date
+		if str, ok := data.(string); ok {
+			if t, err := time.Parse(time.RFC3339, str); err == nil {
+				return t
+			}
+		}
+
+		if data != nil {
+			return ConvertToDataType(data, reflect.TypeOf(data).String())
+		}
+		return data
 	}
 }
 

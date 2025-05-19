@@ -1,6 +1,10 @@
 package helper
 
 import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -271,12 +275,103 @@ func createFilterParams(FilterParams []FilterParam, Pipeline string) string {
 	filterPipeline := Pipeline
 
 	for _, Filter := range FilterParams {
+		FindString := `{"parmasName":"` + Filter.ParamsName + `","parmsDataType":"` + Filter.ParamsDataType + `"}`
 
-		FindString := `{"ParamsName":"` + Filter.ParamsName + `","parmsDataType":"` + Filter.ParamsDataType + `"}`
+		var replacement string
 
-		Replacement := `"` + Filter.DefaultValue + `"`
-		filterPipeline = strings.ReplaceAll(filterPipeline, FindString, Replacement)
+		if Filter.DefaultValue != nil {
+			c := reflect.TypeOf(Filter.DefaultValue).String()
+			replacement = convertValueToDataType(c, Filter.DefaultValue)
+		} else if Filter.Paramsvalue != nil {
+			c := reflect.TypeOf(Filter.Paramsvalue).String()
+			replacement = convertValueToDataType(c, Filter.Paramsvalue)
 
+			// Handle unsupported data types
+			if replacement == `"unsupported_data_type"` || replacement == `unsupported_data_type` {
+				queryString, err := json.Marshal(Filter.Paramsvalue)
+				if err != nil {
+					fmt.Println("Error marshalling Paramsvalue:", err)
+					continue
+				}
+				replacement = string(queryString)
+			}
+		}
+
+		// Wrap in quotes if it's a string/date/time
+		if Filter.ParamsDataType == "string" ||
+			strings.ToLower(Filter.ParamsDataType) == "time.time" ||
+			strings.ToLower(Filter.ParamsDataType) == "date" {
+
+			// Only wrap if not already quoted
+			if !strings.HasPrefix(replacement, `"`) {
+				replacement = `"` + replacement + `"`
+			}
+		}
+
+		// Replace in pipeline
+		filterPipeline = strings.ReplaceAll(filterPipeline, FindString, replacement)
 	}
+
+	// fmt.Println(filterPipeline)
 	return filterPipeline
+}
+
+// OLD
+// func createFilterParams(FilterParams []FilterParam, Pipeline string) string {
+// 	filterPipeline := Pipeline
+
+// 	for _, Filter := range FilterParams {
+
+// 		FindString := `{"ParamsName":"` + Filter.ParamsName + `","parmsDataType":"` + Filter.ParamsDataType + `"}`
+
+// 		Replacement := `"` + Filter.DefaultValue + `"`
+// 		filterPipeline = strings.ReplaceAll(filterPipeline, FindString, Replacement)
+
+//		}
+//		return filterPipeline
+//	}
+func convertValueToDataType(datatype string, defaultValue interface{}) string {
+	var replaceValue string
+
+	if datatype == "int" {
+		if intValue, ok := defaultValue.(int); ok {
+			replaceValue = strconv.Itoa(intValue)
+		}
+	} else if datatype == "int8" {
+		if intValue, ok := defaultValue.(int8); ok {
+			replaceValue = strconv.FormatInt(int64(intValue), 10)
+		}
+	} else if datatype == "int16" {
+		if intValue, ok := defaultValue.(int16); ok {
+			replaceValue = strconv.FormatInt(int64(intValue), 10)
+		}
+	} else if datatype == "int32" {
+		if intValue, ok := defaultValue.(int32); ok {
+			replaceValue = strconv.FormatInt(int64(intValue), 10)
+		}
+	} else if datatype == "int64" {
+		if intValue, ok := defaultValue.(int64); ok {
+			replaceValue = strconv.FormatInt(intValue, 10)
+		}
+	} else if datatype == "bool" {
+		if boolValue, ok := defaultValue.(bool); ok {
+			replaceValue = strconv.FormatBool(boolValue)
+		}
+	} else if datatype == "string" {
+		if stringValue, ok := defaultValue.(string); ok {
+			replaceValue = stringValue
+		}
+	} else if datatype == "float32" {
+		if floatValue, ok := defaultValue.(float32); ok {
+			replaceValue = strconv.FormatFloat(float64(floatValue), 'f', -1, 32)
+		}
+	} else if datatype == "float64" {
+		if floatValue, ok := defaultValue.(float64); ok {
+			replaceValue = strconv.FormatFloat(floatValue, 'f', -1, 64)
+		}
+	} else {
+		replaceValue = "unsupported_data_type"
+	}
+
+	return replaceValue
 }
